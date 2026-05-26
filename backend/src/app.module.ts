@@ -14,7 +14,7 @@ import {TypeOrmModule} from '@nestjs/typeorm';
       password: '1403',
       database: 'HotelHubManagement',
       autoLoadEntities:true,
-      synchronize: true,
+      synchronize: false,
     }),CustomerModule],
   controllers: [AppController],
   providers: [AppService],

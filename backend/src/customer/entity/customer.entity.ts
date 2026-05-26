@@ -29,7 +29,7 @@ export class Customer {
   @Column({ length: 30, unique: true, nullable: false })
   identity_number: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: true })
   address: string;
 
   @Column({ length: 20, default: 'NORMAL' })
