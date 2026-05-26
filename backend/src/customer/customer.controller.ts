@@ -1,5 +1,7 @@
 import { CustomerService } from './customer.service';
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { CreateCustomerDto } from './dto/createCustomer.dto';
+import { UpdateCustomerDto } from './dto/updateCustomer.dto';
 
 @Controller('customer')
 export class CustomerController {
@@ -9,6 +11,34 @@ export class CustomerController {
 
     @Get()
     findAll(){
-        return this,this.customerService.findAll();
+        return this.customerService.findAll();
     }
+
+    @Get(':id')
+    findById(@Param('id') id : number){
+        return this.customerService.findById(id);
+    }
+
+    @Post()
+    create(
+        @Body() createCustomer : CreateCustomerDto
+    ){
+        return this.customerService.create(createCustomer);
+    }
+
+    @Put(':id')
+    update(
+        @Param('id') id: number,
+        @Body() updateCustomer : UpdateCustomerDto
+    ){
+        return this.customerService.update(id, updateCustomer)
+    }
+
+    @Delete(':id')
+    delete(
+        @Param('id') id: number
+    ){
+        return this.customerService.delete(id);
+    }
+
 }
