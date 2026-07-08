@@ -5,8 +5,14 @@ import { AppService } from './app.service';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  @Get('hotel/info')
+  getHotelInfo() {
+    return {
+      name: 'Hotel Hub',
+      address: '123 Main St, City, Country',
+      phone: '+1 234 567 8900',
+      email: 'contact@hotelhub.com',
+      description: 'The best hotel to stay.'
+    };
   }
 }
