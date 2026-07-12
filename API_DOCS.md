@@ -14,6 +14,9 @@ Base URL: `http://localhost:3000`
 - **[GET]** `/hotel/info` - View hotel general information
 - **[GET]** `/rooms` - View all rooms
 - **[GET]** `/rooms/:id` - View specific room details
+- **[POST]** `/rooms` - Create a new room (`{ RoomNumber, RoomTypeId, Floor, Status }`)
+- **[PATCH]** `/rooms/:id` - Update room information (`{ RoomNumber, RoomTypeId, Floor, Status }`)
+- **[DELETE]** `/rooms/:id` - Delete a room
 - **[GET]** `/rooms/availability?checkIn=YYYY-MM-DD&checkOut=YYYY-MM-DD&guests=2` - Check available rooms
 
 ## 3. Booking APIs (Requires Auth)

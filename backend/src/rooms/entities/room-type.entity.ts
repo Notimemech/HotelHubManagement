@@ -3,20 +3,17 @@ import { Room } from './room.entity';
 
 @Entity('RoomTypes')
 export class RoomType {
-  @PrimaryGeneratedColumn()
-  RoomTypeId: number;
+  @PrimaryGeneratedColumn({ name: 'TypeID' })
+  TypeID: number;
 
-  @Column({ type: 'nvarchar', length: 50 })
+  @Column({ name: 'TypeName', type: 'nvarchar', length: 50 })
   TypeName: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
+  @Column({ name: 'Description', type: 'nvarchar', length: 'MAX', nullable: true })
   Description: string;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2 })
-  Price: number;
-
-  @Column({ type: 'int' })
-  MaxGuests: number;
+  @Column({ name: 'PricePerDay', type: 'decimal', precision: 18, scale: 2 })
+  PricePerDay: number;
 
   @OneToMany(() => Room, (room) => room.roomType)
   rooms: Room[];

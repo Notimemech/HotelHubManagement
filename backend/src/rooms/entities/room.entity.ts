@@ -4,23 +4,23 @@ import { BookingDetail } from '../../bookings/entities/booking-detail.entity';
 
 @Entity('Rooms')
 export class Room {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'RoomID' })
   RoomId: number;
 
-  @Column({ type: 'varchar', length: 20, unique: true })
-  RoomNumber: string;
+  @Column({ name: 'RoomCode', type: 'varchar', length: 10, unique: true })
+  RoomCode: string;
 
-  @Column({ type: 'int' })
-  RoomTypeId: number;
+  @Column({ name: 'TypeID', type: 'int' })
+  TypeID: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'Floor', type: 'int', nullable: true })
   Floor: number;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ name: 'Status', type: 'varchar', length: 20 })
   Status: string;
 
   @ManyToOne(() => RoomType, (roomType) => roomType.rooms)
-  @JoinColumn({ name: 'RoomTypeId' })
+  @JoinColumn({ name: 'TypeID' })
   roomType: RoomType;
 
   @OneToMany(() => BookingDetail, (bookingDetail) => bookingDetail.room)
