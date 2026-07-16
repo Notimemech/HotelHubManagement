@@ -1,0 +1,40 @@
+---
+title: Auth - Login Flow (POST /auth/login)
+---
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Ctrl as AuthController
+    participant Service as AuthService
+    participant AccountModel as AccountModel (TypeORM Repository)
+    participant RefreshTokenModel as RefreshTokenModel (TypeORM Repository)
+    participant Util as Security Utils (bcrypt / crypto / jwt)
+    participant DB as Database (SQL Server)
+
+    note right of Client: POST /auth/login
+    Client->>Ctrl: LoginDto (username, password)
+    Ctrl->>Service: login(dto)
+    Service->>AccountModel: findOne({ username })
+    AccountModel->>DB: SELECT * FROM Accounts WHERE Username = ?
+    DB-->>AccountModel: row / null
+    AccountModel-->>Service: Account Entity / null
+    opt Invalid account or inactive
+        Service-->>Client: Throw UnauthorizedException
+    end
+    Service->>Util: bcrypt.compare(password, account.password)
+    Util-->>Service: isMatch
+    opt Password mismatch
+        Service-->>Client: Throw UnauthorizedException
+    end
+    Service->>Util: jwtService.signAsync(payload)
+    Util-->>Service: accessToken (15m)
+    Service->>Util: crypto.randomBytes(40) (generateRefreshToken)
+    Util-->>Service: rawRefreshToken
+    Service->>Util: hashToken(rawRefreshToken) (SHA-256)
+    Util-->>Service: tokenHash
+    Service->>RefreshTokenModel: save(refreshToken)
+    RefreshTokenModel->>DB: INSERT INTO RefreshTokens ...
+    DB-->>RefreshTokenModel: persisted row
+    RefreshTokenModel-->>Service: RefreshToken Entity
+    Service-->>Ctrl: TokenPairDto (accessToken, refreshToken)
+    Ctrl-->>Client: HTTP 200 - TokenPairDto

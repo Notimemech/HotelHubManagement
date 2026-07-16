@@ -46,6 +46,14 @@ export class Booking {
   @Column({ name: 'IsDeleted', type: 'bit', default: 0 })
   isDeleted!: boolean;
 
+  @Column({
+    name: 'EvidenceImage',
+    type: 'nvarchar',
+    length: 'MAX',
+    nullable: true,
+  })
+  evidenceImage!: string | null;
+
   @ManyToOne(() => Customer, (customer) => customer.bookings)
   @JoinColumn({ name: 'CustomerId' })
   customer: Customer;

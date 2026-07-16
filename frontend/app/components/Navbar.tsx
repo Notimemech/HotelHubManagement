@@ -59,6 +59,14 @@ export function Navbar() {
                         Quản lý
                       </Link>
                     )}
+                    <Link
+                      href="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 w-full text-left"
+                    >
+                      <User className="w-4 h-4 text-zinc-400" />
+                      Trang cá nhân
+                    </Link>
                     <button
                       onClick={() => {
                         setDropdownOpen(false);

@@ -1,0 +1,92 @@
+---
+title: Dashboard Module - Class Diagram
+---
+classDiagram
+    class DashboardModule {
+        <<Module>>
+    }
+
+    class DashboardController {
+        <<Controller>>
+        -dashboardService: DashboardService
+        +getSummary(from: string, to: string) Promise~DashboardSummaryDto~
+    }
+
+    class DashboardService {
+        <<Service>>
+        -bookingRepo: Repository~Booking~
+        -versionRepo: Repository~BookingVersion~
+        -detailRepo: Repository~BookingDetail~
+        -paymentRepo: Repository~Payment~
+        -roomRepo: Repository~Room~
+        -roomTypeRepo: Repository~RoomType~
+        +getSummary(from: string, to: string) Promise~DashboardSummaryDto~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+    }
+
+    class RolesGuard {
+        <<Guard>>
+        -reflector: Reflector
+        +canActivate(context: ExecutionContext) boolean
+    }
+
+    class Roles {
+        <<Decorator>>
+        +Roles(...roles: string[]) MethodDecorator
+    }
+
+    class DashboardSummaryFilterDto {
+        <<DTO Input>>
+        +from?: string
+        +to?: string
+    }
+
+    class DashboardSummaryDto {
+        <<DTO Output>>
+        +totalBookings: number
+        +totalRevenue: number
+        +occupancyRate: number
+        +topRoomTypes: TopRoomTypeItem[]
+        +bookingsByDay: BookingsByDayItem[]
+        +recentBookings: RecentBookingItem[]
+    }
+
+    class TopRoomTypeItem {
+        <<DTO Output Item>>
+        +typeName: string
+        +bookings: number
+    }
+
+    class BookingsByDayItem {
+        <<DTO Output Item>>
+        +date: string
+        +count: number
+    }
+
+    class RecentBookingItem {
+        <<DTO Output Item>>
+        +bookingId: string
+        +customerName: string
+        +totalPrice: number
+        +status: string
+        +checkIn: Date | null
+        +checkOut: Date | null
+    }
+
+    DashboardModule --> DashboardController
+    DashboardModule --> DashboardService
+    DashboardController --> DashboardService
+    DashboardController ..> AuthGuard : protects all routes
+    DashboardController ..> RolesGuard : enforces Manager / Receptionist
+    DashboardController ..> Roles : declares Manager, Receptionist
+    DashboardService ..> DashboardSummaryFilterDto : consumes
+    DashboardService ..> Booking : aggregates
+    DashboardService ..> BookingVersion : aggregates
+    DashboardService ..> BookingDetail : aggregates
+    DashboardService ..> Payment : aggregates
+    DashboardService ..> Room : aggregates
+    DashboardService ..> RoomType : aggregates
+    RolesGuard ..> Roles : resolves metadata

@@ -11,28 +11,93 @@ classDiagram
         -servicesService: ServicesService
         +findAll() Promise~Service[]~
         +create(dto: CreateServiceDto) Promise~Service~
+        +update(id: string, dto: UpdateServiceDto) Promise~Service~
+        +remove(id: string) Promise~DeleteMessageDto~
+        +requestService(req: any, dto: RequestServiceDto) Promise~RequestServiceResponseDto~
     }
 
     class ServicesService {
         <<Service>>
         -serviceRepo: Repository~Service~
+        -bookingServiceRepo: Repository~BookingService~
         -bookingRepo: Repository~Booking~
         +findAll() Promise~Service[]~
         +create(dto: CreateServiceDto) Promise~Service~
+        +update(id: string, dto: UpdateServiceDto) Promise~Service~
+        +remove(id: string) Promise~DeleteMessageDto~
+        +requestService(accountId: string, dto: RequestServiceDto) Promise~RequestServiceResponseDto~
     }
 
     class AuthGuard {
         <<Guard>>
     }
 
+    class RolesGuard {
+        <<Guard>>
+        -reflector: Reflector
+        +canActivate(context: ExecutionContext) boolean
+    }
+
+    class Roles {
+        <<Decorator>>
+        +Roles(...roles: string[]) MethodDecorator
+    }
+
     class CreateServiceDto {
-        <<DTO>>
+        <<DTO Input>>
         +serviceName: string
         +price: number
+    }
+
+    class UpdateServiceDto {
+        <<DTO Input>>
+        +serviceName?: string
+        +price?: number
+    }
+
+    class RequestServiceDto {
+        <<DTO Input>>
+        +bookingId: string
+        +serviceId: string
+        +quantity: number
+    }
+
+    class DeleteMessageDto {
+        <<DTO Output>>
+        +message: string
+    }
+
+    class RequestServiceResponseDto {
+        <<DTO Output>>
+        +message: string
+        +totalPrice: number
+    }
+
+    class Service {
+        <<Entity>>
+        +serviceId: string
+        +serviceName: string
+        +price: number
+    }
+
+    class BookingService {
+        <<Entity>>
+        +bookingServiceId: string
+        +bookingId: string
+        +serviceId: string
+        +quantity: number
     }
 
     ServicesModule --> ServicesController
     ServicesModule --> ServicesService
     ServicesController --> ServicesService
-    ServicesController ..> AuthGuard : protects
+    ServicesController ..> AuthGuard : protects write routes
+    ServicesController ..> RolesGuard : enforces roles
+    ServicesController ..> Roles : declares Manager / Receptionist / User
     ServicesService ..> CreateServiceDto : consumes
+    ServicesService ..> UpdateServiceDto : consumes
+    ServicesService ..> RequestServiceDto : consumes
+    ServicesService ..> Service : manages
+    ServicesService ..> BookingService : manages
+    ServicesService ..> Booking : updates totalPrice
+    RolesGuard ..> Roles : resolves metadata
