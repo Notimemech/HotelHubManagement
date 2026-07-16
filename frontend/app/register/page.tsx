@@ -82,7 +82,7 @@ export default function RegisterPage() {
               onChange={update("username")}
               disabled={pending}
               autoComplete="username"
-              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
             />
           </div>
 
@@ -93,7 +93,7 @@ export default function RegisterPage() {
               value={form.fullName}
               onChange={update("fullName")}
               disabled={pending}
-              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
             />
           </div>
 
@@ -105,7 +105,7 @@ export default function RegisterPage() {
               onChange={update("email")}
               disabled={pending}
               autoComplete="email"
-              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
               placeholder="(tùy chọn)"
             />
           </div>
@@ -118,7 +118,7 @@ export default function RegisterPage() {
               onChange={update("phone")}
               disabled={pending}
               autoComplete="tel"
-              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
               placeholder="(tùy chọn)"
             />
           </div>
@@ -131,7 +131,7 @@ export default function RegisterPage() {
               onChange={update("password")}
               disabled={pending}
               autoComplete="new-password"
-              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
             />
           </div>
 
@@ -143,7 +143,7 @@ export default function RegisterPage() {
               onChange={update("confirmPassword")}
               disabled={pending}
               autoComplete="new-password"
-              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-md border border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
             />
           </div>
 

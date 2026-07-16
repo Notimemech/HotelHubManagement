@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Tell the browser this page is light-only so it stops applying dark-mode
+     user-agent styles (white text on form controls, etc.). */
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,12 +15,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* No dark scheme — the app hardcodes light surfaces everywhere
+   (bg-white, bg-zinc-50, etc.). Letting OS dark mode flip --foreground
+   to near-white would render inputs/textarea/select invisible on
+   those light backgrounds. */
 
 body {
   background: var(--background);

@@ -53,12 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const login = async (username: string, password: string) => {
-    const res = await apiRequest<{ access_token: string }>("/auth/login", {
+    const res = await apiRequest<{ accessToken: string }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
 
-    const token = res.access_token;
+    const token = res.accessToken;
     localStorage.setItem("token", token);
     const decoded = jwtDecode<DecodedToken>(token);
     const authedUser = {

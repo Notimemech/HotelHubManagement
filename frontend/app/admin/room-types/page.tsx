@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Table } from "../components/Table";
 import { Modal } from "../components/Modal";
 import { Spinner } from "@/app/components/Spinner";
+import { INPUT } from "../components/Input";
 import {
   listRoomTypes,
   createRoomType,
@@ -128,7 +129,6 @@ export default function RoomTypesPage() {
   );
 }
 
-const INPUT = "w-full px-3 py-2 text-sm rounded-md border border-zinc-300 focus:border-amber-500 focus:outline-none";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div><label className="block text-xs font-medium text-zinc-600 mb-1">{label}</label>{children}</div>;
 }
