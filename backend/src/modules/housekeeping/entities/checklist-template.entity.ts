@@ -6,7 +6,13 @@ export class ChecklistTemplate {
   @PrimaryGeneratedColumn('uuid', { name: 'TemplateId' })
   templateId!: string;
 
-  @Column({ name: 'TemplateType', type: 'nvarchar', length: 50, nullable: true })
+  @Column({
+    name: 'TemplateType',
+    type: 'nvarchar',
+    length: 50,
+    nullable: true,
+    unique: true,
+  })
   templateType!: string;
 
   @Column({ name: 'ItemName', type: 'nvarchar', length: 255 })

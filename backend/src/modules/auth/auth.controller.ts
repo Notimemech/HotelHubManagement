@@ -11,6 +11,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthGuard } from './auth.guard';
 
 @Controller('auth')
@@ -29,9 +30,15 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Post('refresh')
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshToken(dto);
+  }
+
+  @HttpCode(HttpStatus.OK)
   @Post('logout')
-  logout() {
-    return this.authService.logout();
+  logout(@Body() dto: RefreshTokenDto) {
+    return this.authService.logout(dto);
   }
 
   @UseGuards(AuthGuard)

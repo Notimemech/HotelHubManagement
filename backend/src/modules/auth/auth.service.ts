@@ -5,15 +5,18 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'crypto';
 import { Account } from '../accounts/entities/account.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
 import { AccountsService } from '../accounts/accounts.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,10 +25,28 @@ export class AuthService {
     private readonly accountRepo: Repository<Account>,
     @InjectRepository(Customer)
     private readonly customerRepo: Repository<Customer>,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepo: Repository<RefreshToken>,
     private readonly accountsService: AccountsService,
     private readonly jwtService: JwtService,
-    private readonly dataSource: DataSource,
   ) {}
+
+  hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  generateRefreshToken(): string {
+    return randomBytes(40).toString('hex');
+  }
+
+  async signAccessToken(account: Account, role: string): Promise<string> {
+    const payload = {
+      sub: account.accountId,
+      username: account.username,
+      role,
+    };
+    return this.jwtService.signAsync(payload, { expiresIn: '15m' });
+  }
 
   async register(dto: RegisterDto) {
     const existing = await this.accountRepo.findOne({
@@ -65,15 +86,81 @@ export class AuthService {
     const roles = await this.accountsService.getRoles(account.accountId);
     const role = roles[0]?.roleName ?? 'User';
 
-    const payload = {
-      sub: account.accountId,
-      username: account.username,
-      role,
+    const accessToken = await this.signAccessToken(account, role);
+    const rawRefreshToken = this.generateRefreshToken();
+    const tokenHash = this.hashToken(rawRefreshToken);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    await this.refreshTokenRepo.save(
+      this.refreshTokenRepo.create({
+        accountId: account.accountId,
+        tokenHash,
+        expiresAt,
+      }),
+    );
+
+    return {
+      accessToken,
+      refreshToken: rawRefreshToken,
     };
-    return { access_token: await this.jwtService.signAsync(payload) };
   }
 
-  logout() {
+  async refreshToken(dto: RefreshTokenDto) {
+    const tokenHash = this.hashToken(dto.refreshToken);
+    const record = await this.refreshTokenRepo.findOne({
+      where: { tokenHash },
+    });
+    if (!record) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    if (new Date() > record.expiresAt) {
+      await this.refreshTokenRepo.remove(record);
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
+    const account = await this.accountRepo.findOne({
+      where: { accountId: record.accountId },
+    });
+    if (!account || !account.isActive) {
+      throw new UnauthorizedException('Account not found or inactive');
+    }
+
+    await this.refreshTokenRepo.remove(record);
+
+    const roles = await this.accountsService.getRoles(account.accountId);
+    const role = roles[0]?.roleName ?? 'User';
+
+    const newAccessToken = await this.signAccessToken(account, role);
+    const newRawRefreshToken = this.generateRefreshToken();
+    const newTokenHash = this.hashToken(newRawRefreshToken);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await this.refreshTokenRepo.save(
+      this.refreshTokenRepo.create({
+        accountId: account.accountId,
+        tokenHash: newTokenHash,
+        expiresAt,
+      }),
+    );
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRawRefreshToken,
+    };
+  }
+
+  async logout(dto: RefreshTokenDto) {
+    const tokenHash = this.hashToken(dto.refreshToken);
+    const record = await this.refreshTokenRepo.findOne({
+      where: { tokenHash },
+    });
+    if (record) {
+      await this.refreshTokenRepo.remove(record);
+    }
     return { message: 'Logged out successfully' };
   }
 

@@ -1,19 +1,24 @@
-"use client";
+'use client';
 
-import React, { useState, Suspense } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-import { Spinner } from "../components/Spinner";
+import React, { useState, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { apiFetch, ApiError } from '@/lib/api';
+import { Spinner } from '../components/Spinner';
+import {
+  adaptLoginResponse,
+  decodeToken,
+  tokenStorage,
+} from '@/lib/auth';
+import type { LoginResponse } from '@/lib/types';
 
 function LoginForm() {
-  const { login } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const registered = searchParams.get("registered") === "1";
+  const registered = searchParams.get('registered') === '1';
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -21,54 +26,81 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
 
-    if (!username.trim()) return setError("Vui lòng nhập tên đăng nhập.");
-    if (!password) return setError("Vui lòng nhập mật khẩu.");
+    if (!username.trim()) return setError('Please enter your username.');
+    if (!password) return setError('Please enter your password.');
 
     setPending(true);
     try {
-      await login(username.trim(), password);
+      const res = await apiFetch<LoginResponse>('/auth/login', {
+        method: 'POST',
+        body: { username: username.trim(), password },
+        skipAuthRedirect: true,
+      });
+
+      const tokens = adaptLoginResponse(res);
+      if (!tokens.accessToken) throw new Error('Server returned no access token.');
+
+      tokenStorage.saveTokens(tokens);
+
+      const decoded = decodeToken(tokens.accessToken);
+      if (decoded) {
+        tokenStorage.saveUser({
+          accountId: decoded.sub,
+          username: decoded.username,
+          role: decoded.role,
+        });
+      }
+
+      router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đăng nhập thất bại.");
+      if (err instanceof ApiError) setError(err.message);
+      else if (err instanceof Error) setError(err.message);
+      else setError('Login failed. Please try again.');
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="hidden lg:block lg:w-1/2 relative bg-zinc-900">
-        <Image
-          src="https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?auto=format&fit=crop&w=1200&q=80"
-          alt="HotelHub lobby"
-          fill
-          priority
-          sizes="(min-width: 1024px) 50vw, 100vw"
-          className="object-cover opacity-90"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/80 to-transparent flex flex-col justify-end p-12 text-white">
-          <p className="text-amber-400 font-semibold tracking-widest uppercase text-sm mb-2">
-            HotelHub
+    <main className="min-h-screen flex flex-col lg:flex-row bg-linen-50 bg-linen-grain">
+      <aside className="hidden lg:block lg:w-1/2 relative bg-ink-900 text-linen-50">
+        <div className="absolute inset-0 px-14 py-20 flex flex-col justify-between">
+          <div>
+            <p className="font-editorial italic text-brass-100 text-lg mb-3">
+              HotelHub
+            </p>
+            <h1 className="font-editorial text-5xl leading-[1.05]">
+              Welcome back <br />
+              <span className="italic text-brass-100">to the house</span>.
+            </h1>
+          </div>
+          <p className="font-editorial italic text-brass-100/80 max-w-sm leading-relaxed">
+            “We do not greet guests. We greet neighbours whose table is set.”
           </p>
-          <h1 className="text-4xl font-bold leading-tight">
-            Chào mừng trở lại <br /> với trải nghiệm 5 sao
-          </h1>
         </div>
-      </div>
+      </aside>
 
-      <div className="flex-1 flex items-center justify-center px-6 py-12 sm:px-12 bg-white">
+      <section className="flex-1 flex items-center justify-center px-6 py-14 sm:px-12">
         <div className="w-full max-w-md">
-          <div className="mb-8">
-            <Link href="/" className="text-2xl font-bold tracking-tight text-zinc-900">
-              Hotel<span className="text-amber-600">Hub</span>
+          <div className="mb-8 text-center">
+            <Link
+              href="/"
+              className="font-editorial italic text-2xl font-bold text-ink-900"
+            >
+              Hotel<span className="text-brass-700">Hub</span>
             </Link>
           </div>
 
-          <h2 className="text-3xl font-bold text-zinc-900 mb-2">Đăng nhập</h2>
-          <p className="text-zinc-500 mb-8">Chào mừng bạn quay lại. Vui lòng nhập thông tin tài khoản.</p>
+          <h2 className="font-editorial text-4xl text-ink-900 mb-2 text-center">
+            Sign in
+          </h2>
+          <p className="text-ink-500 text-center mb-10 text-sm">
+            Continue your story with us.
+          </p>
 
           {registered && (
-            <div className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.
+            <div className="mb-6 rounded-md border border-brass-300 bg-brass-50 px-4 py-3 text-sm text-ink-900">
+              Registration successful. Please sign in to continue.
             </div>
           )}
 
@@ -80,30 +112,38 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                Tên đăng nhập
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-ink-700 mb-1.5"
+              >
+                Username
               </label>
               <input
+                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 disabled={pending}
-                className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+                className="w-full px-4 py-2.5 rounded-md border border-linen-300 bg-linen-50 focus:border-brass-500 focus:ring-2 focus:ring-brass-100 focus:outline-none transition disabled:opacity-50"
                 placeholder="username"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
-                Mật khẩu
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-ink-700 mb-1.5"
+              >
+                Password
               </label>
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 disabled={pending}
-                className="w-full px-4 py-2.5 rounded-md border border-zinc-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition disabled:opacity-50"
+                className="w-full px-4 py-2.5 rounded-md border border-linen-300 bg-linen-50 focus:border-brass-500 focus:ring-2 focus:ring-brass-100 focus:outline-none transition disabled:opacity-50"
                 placeholder="••••••"
               />
             </div>
@@ -111,33 +151,42 @@ function LoginForm() {
             <button
               type="submit"
               disabled={pending}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-semibold transition disabled:opacity-60 cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md bg-ink-900 hover:bg-ink-700 text-linen-50 font-semibold transition disabled:opacity-60 cursor-pointer tracking-wide"
             >
               {pending ? (
                 <>
-                  <Spinner /> Đang đăng nhập...
+                  <Spinner className="w-5 h-5 text-linen-50" /> Signing in...
                 </>
               ) : (
-                "Đăng nhập"
+                'Sign in'
               )}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-zinc-600">
-            Chưa có tài khoản?{" "}
-            <Link href="/register" className="font-semibold text-amber-700 hover:text-amber-800">
-              Đăng ký ngay
+          <p className="mt-8 text-center text-sm text-ink-700">
+            First-time guest?{' '}
+            <Link
+              href="/register"
+              className="font-semibold text-brass-700 hover:text-brass-500 transition"
+            >
+              Create an account
             </Link>
           </p>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Spinner className="w-8 h-8 text-amber-600" /></div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-linen-50">
+          <Spinner className="w-8 h-8 text-brass-700" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

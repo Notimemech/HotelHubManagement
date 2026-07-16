@@ -6,16 +6,17 @@ import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 import { Account } from '../accounts/entities/account.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
 import { AccountsModule } from '../accounts/accounts.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Account, Customer]),
+    TypeOrmModule.forFeature([Account, Customer, RefreshToken]),
     AccountsModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET || 'my-super-secret-key',
-      signOptions: { expiresIn: '1d' },
+      signOptions: { expiresIn: '15m' },
     }),
   ],
   controllers: [AuthController],
