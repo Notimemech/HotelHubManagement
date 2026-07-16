@@ -4,14 +4,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
-      type: 'postgres',
+      type: 'mssql',
       host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || '1403',
+      port: Number(process.env.DB_PORT) || 1433,
+      username: process.env.DB_USERNAME || 'sa',
+      password: process.env.DB_PASSWORD || 'HotelHub@2026',
       database: process.env.DB_NAME || 'HotelHubManagement',
       autoLoadEntities: true,
       synchronize: true,
+      options: {
+        encrypt: false,
+        trustServerCertificate: true,
+      },
     }),
   ],
   exports: [TypeOrmModule],
