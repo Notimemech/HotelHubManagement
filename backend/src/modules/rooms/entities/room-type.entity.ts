@@ -9,11 +9,19 @@ export class RoomType {
   @Column({ name: 'TypeName', type: 'nvarchar', length: 50 })
   TypeName: string;
 
-  @Column({ name: 'Description', type: 'nvarchar', length: 'MAX', nullable: true })
+  @Column({
+    name: 'Description',
+    type: 'nvarchar',
+    length: 'MAX',
+    nullable: true,
+  })
   Description: string;
 
-  @Column({ name: 'PricePerDay', type: 'decimal', precision: 18, scale: 2 })
-  PricePerDay: number;
+  @Column({ name: 'Price', type: 'decimal', precision: 18, scale: 2 })
+  Price: number;
+
+  @Column({ name: 'MaxGuests', type: 'int', default: 2 })
+  MaxGuests: number;
 
   @OneToMany(() => Room, (room) => room.roomType)
   rooms: Room[];

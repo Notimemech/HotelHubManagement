@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Room } from './entities/room.entity';
@@ -8,7 +12,7 @@ import { RoomType } from './entities/room-type.entity';
 export class RoomsService {
   constructor(
     @InjectRepository(Room) private roomRepo: Repository<Room>,
-    @InjectRepository(RoomType) private roomTypeRepo: Repository<RoomType>
+    @InjectRepository(RoomType) private roomTypeRepo: Repository<RoomType>,
   ) {}
 
   async findAll() {
@@ -16,7 +20,10 @@ export class RoomsService {
   }
 
   async findOne(id: number) {
-    const room = await this.roomRepo.findOne({ where: { RoomId: id }, relations: { roomType: true } });
+    const room = await this.roomRepo.findOne({
+      where: { RoomId: id },
+      relations: { roomType: true },
+    });
     if (!room) throw new NotFoundException('Room not found');
     return room;
   }
@@ -26,12 +33,16 @@ export class RoomsService {
       throw new BadRequestException('RoomCode is required');
     }
 
-    const existingRoom = await this.roomRepo.findOne({ where: { RoomCode: dto.RoomCode } });
+    const existingRoom = await this.roomRepo.findOne({
+      where: { RoomCode: dto.RoomCode },
+    });
     if (existingRoom) {
       throw new BadRequestException('Room code already exists');
     }
 
-    const roomType = await this.roomTypeRepo.findOne({ where: { TypeID: dto.TypeID } });
+    const roomType = await this.roomTypeRepo.findOne({
+      where: { TypeID: dto.TypeID },
+    });
     if (!roomType) {
       throw new NotFoundException('Room type not found');
     }
@@ -47,14 +58,18 @@ export class RoomsService {
     }
 
     if (dto.RoomCode) {
-      const existingRoom = await this.roomRepo.findOne({ where: { RoomCode: dto.RoomCode } });
+      const existingRoom = await this.roomRepo.findOne({
+        where: { RoomCode: dto.RoomCode },
+      });
       if (existingRoom && existingRoom.RoomId !== id) {
         throw new BadRequestException('Room code already exists');
       }
     }
 
     if (dto.TypeID) {
-      const roomType = await this.roomTypeRepo.findOne({ where: { TypeID: dto.TypeID } });
+      const roomType = await this.roomTypeRepo.findOne({
+        where: { TypeID: dto.TypeID },
+      });
       if (!roomType) {
         throw new NotFoundException('Room type not found');
       }
@@ -75,7 +90,8 @@ export class RoomsService {
   }
 
   async checkAvailability(checkIn: string, checkOut: string, guests: number) {
-    const qb = this.roomRepo.createQueryBuilder('room')
+    const qb = this.roomRepo
+      .createQueryBuilder('room')
       .leftJoinAndSelect('room.roomType', 'roomType')
       .where('room.Status = :status', { status: 'Available' });
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Service } from './entities/service.entity';
@@ -10,7 +14,8 @@ import { RequestServiceDto } from './dto/request-service.dto';
 export class ServicesService {
   constructor(
     @InjectRepository(Service) private serviceRepo: Repository<Service>,
-    @InjectRepository(BookingService) private bookingServiceRepo: Repository<BookingService>,
+    @InjectRepository(BookingService)
+    private bookingServiceRepo: Repository<BookingService>,
     @InjectRepository(Booking) private bookingRepo: Repository<Booking>,
   ) {}
 
@@ -19,24 +24,32 @@ export class ServicesService {
   }
 
   async requestService(customerId: number, dto: RequestServiceDto) {
-    const booking = await this.bookingRepo.findOne({ where: { BookingId: dto.BookingId, CustomerId: customerId } });
+    const booking = await this.bookingRepo.findOne({
+      where: { BookingId: dto.BookingId, CustomerId: customerId },
+    });
     if (!booking) throw new NotFoundException('Booking not found');
 
-    const service = await this.serviceRepo.findOne({ where: { ServiceId: dto.ServiceId } });
+    const service = await this.serviceRepo.findOne({
+      where: { ServiceId: dto.ServiceId },
+    });
     if (!service) throw new NotFoundException('Service not found');
 
     const bookingService = this.bookingServiceRepo.create({
       BookingId: dto.BookingId,
       ServiceId: dto.ServiceId,
-      Quantity: dto.Quantity
+      Quantity: dto.Quantity,
     });
 
     await this.bookingServiceRepo.save(bookingService);
 
     // Update total price of the booking
-    booking.TotalPrice = Number(booking.TotalPrice) + (Number(service.Price) * dto.Quantity);
+    booking.TotalPrice =
+      Number(booking.TotalPrice) + Number(service.Price) * dto.Quantity;
     await this.bookingRepo.save(booking);
 
-    return { message: 'Service requested successfully', TotalPrice: booking.TotalPrice };
+    return {
+      message: 'Service requested successfully',
+      TotalPrice: booking.TotalPrice,
+    };
   }
 }

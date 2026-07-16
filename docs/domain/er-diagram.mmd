@@ -1,0 +1,214 @@
+---
+title: HotelHubManagement - Domain ER Diagram
+---
+erDiagram
+    direction LR
+
+    %% ============================================================
+    %% Identity BC
+    %% ============================================================
+    ACCOUNT ||--o{ ACCOUNTROLE : "holds"
+    ROLE    ||--o{ ACCOUNTROLE : "granted via"
+
+    ACCOUNT {
+        int      AccountId PK
+        string   Username "UNIQUE"
+        string   Password
+        boolean  IsActive
+        datetime CreatedAt
+    }
+
+    ROLE {
+        int    RoleId PK
+        string RoleName
+        string Description
+    }
+
+    ACCOUNTROLE {
+        int AccountId FK
+        int RoleId FK
+    }
+
+    %% ============================================================
+    %% Customer Management BC
+    %% ============================================================
+    ACCOUNT   ||--o| CUSTOMER : "profiles (1:1)"
+    CUSTOMER  ||--o{ CUSTOMERBANKACCOUNT : "owns refund account"
+    CUSTOMER  ||--o{ BOOKING : "places"
+
+    CUSTOMER {
+        int      CustomerId PK
+        int      AccountId FK "UNIQUE"
+        string   FullName
+        string   Email "UNIQUE"
+        string   Phone "UNIQUE"
+        string   Avatar
+        datetime CreatedAt
+    }
+
+    CUSTOMERBANKACCOUNT {
+        int     BankId PK
+        int     CustomerId FK
+        string  BankName
+        string  AccountNumber
+        string  AccountHolderName
+        boolean IsDefault
+    }
+
+    %% ============================================================
+    %% Staff BC
+    %% ============================================================
+    ACCOUNT ||--o| STAFFINFO : "profiles (1:1)"
+    STAFFINFO ||--o{ BOOKINGVERSION    : "in charge of"
+    STAFFINFO ||--o{ CHECKLISTLOG      : "performs"
+    STAFFINFO ||--o{ ISSUEREPORT       : "reports"
+    STAFFINFO ||--o{ MAINTENANCEPROVE  : "resolves"
+
+    STAFFINFO {
+        int    StaffId PK
+        int    AccountId FK "UNIQUE"
+        string CCCD "UNIQUE"
+        string FullName
+        date   BirthDate
+        string Phone
+        string Address
+    }
+
+    %% ============================================================
+    %% Room Catalogue BC
+    %% ============================================================
+    ROOMTYPE ||--o{ ROOM : "categorises"
+    ROOM ||--o{ BOOKINGDETAIL : "is reserved in"
+    ROOM ||--o{ CHECKLISTLOG  : "is cleaned via"
+    ROOM ||--o{ ISSUEREPORT   : "is reported as faulty in"
+
+    ROOMTYPE {
+        int     TypeID PK
+        string  TypeName
+        string  Description
+        decimal Price
+        int     MaxGuests
+    }
+
+    ROOM {
+        int    RoomID PK
+        string RoomCode "UNIQUE"
+        int    TypeID FK
+        int    Floor
+        string Status "Available | Occupied | Maintenance"
+    }
+
+    %% ============================================================
+    %% Booking Lifecycle BC
+    %% ============================================================
+    BOOKING       ||--o{ BOOKINGVERSION : "evolves through"
+    BOOKINGVERSION ||--|{ BOOKINGDETAIL : "snapshots rooms at"
+    BOOKINGVERSION ||--o{ PAYMENT       : "captures txn at"
+    BOOKING       ||--o{ BOOKINGSERVICE : "consumes"
+    BOOKING       ||--o{ PAYMENT         : "is settled by"
+
+    BOOKING {
+        int      BookingId PK
+        int      CustomerId FK
+        int      CurrentVersion
+        decimal  TotalPrice
+        string   Status "Pending | Confirmed | Cancelled | Completed"
+        boolean  IsDeleted
+    }
+
+    BOOKINGVERSION {
+        int      VersionId PK
+        int      BookingId FK
+        int      VersionNumber
+        decimal  TotalAmountAtThisVersion
+        int      StaffInCharge FK
+        string   ChangeReason
+        string   RequestEvidenceImage
+        datetime CreatedAt
+    }
+
+    BOOKINGDETAIL {
+        int     BookingDetailId PK
+        int     VersionId FK
+        int     RoomID FK
+        decimal Price
+        int     Nights
+    }
+
+    %% ============================================================
+    %% Payment Settlement BC
+    %% ============================================================
+    PAYMENT {
+        int      PaymentId PK
+        int      VersionId FK
+        int      BookingId FK
+        decimal  Amount "negative => refund"
+        string   Method "Cash | Visa | Momo | VNPay"
+        string   Status "Pending | Paid | Failed"
+        string   ExternalTransactionID
+        datetime PaidAt
+    }
+
+    %% ============================================================
+    %% Ancillary Services BC
+    %% ============================================================
+    SERVICE ||--o{ BOOKINGSERVICE : "is purchased via"
+
+    SERVICE {
+        int     ServiceId PK
+        string  ServiceName
+        decimal Price
+    }
+
+    BOOKINGSERVICE {
+        int BookingServiceId PK
+        int BookingId FK
+        int ServiceId FK
+        int Quantity
+    }
+
+    %% ============================================================
+    %% Housekeeping BC
+    %% ============================================================
+    CHECKLISTTEMPLATE ||--o{ CHECKLISTLOG : "instantiated by"
+
+    CHECKLISTTEMPLATE {
+        int    TemplateId PK
+        string TemplateType "Checkin | Checkout | CleaningStandard"
+        string ItemName
+        string Description
+    }
+
+    CHECKLISTLOG {
+        int      LogId PK
+        int      RoomID FK
+        int      StaffId FK
+        string   TemplateType
+        datetime LogTime
+        string   EvidenceImage
+        string   Notes
+    }
+
+    %% ============================================================
+    %% Maintenance BC
+    %% ============================================================
+    ISSUEREPORT ||--o{ MAINTENANCEPROVE : "is resolved by"
+
+    ISSUEREPORT {
+        int      IssueId PK
+        int      RoomID FK
+        int      ReporterId FK
+        string   Description
+        string   IssueImage
+        string   Status "Pending | Resolved"
+        datetime CreatedAt
+    }
+
+    MAINTENANCEPROVE {
+        int      ProveId PK
+        int      IssueId FK
+        int      MaintainerId FK
+        string   FinishImage
+        string   FinishVideo
+        datetime ResolvedAt
+    }

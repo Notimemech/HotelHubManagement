@@ -1,0 +1,50 @@
+---
+title: Bookings Module - Class Diagram
+---
+classDiagram
+    class BookingsModule {
+        <<Module>>
+    }
+
+    class BookingsController {
+        <<Controller>>
+        -bookingsService: BookingsService
+        +create(req: AuthRequest, dto: CreateBookingDto) Promise~Booking~
+        +findAll(req: AuthRequest) Promise~Booking[]~
+        +findOne(req: AuthRequest, id: number) Promise~Booking~
+        +update(req: AuthRequest, id: number, updateData: BookingPatch) Promise~Booking~
+        +cancel(req: AuthRequest, id: number) Promise~Booking~
+    }
+
+    class BookingsService {
+        <<Service>>
+        -bookingRepo: Repository~Booking~
+        -bookingDetailRepo: Repository~BookingDetail~
+        -roomRepo: Repository~Room~
+        +create(customerId: number, dto: CreateBookingDto) Promise~Booking~
+        +findAll(customerId: number) Promise~Booking[]~
+        +findOne(customerId: number, id: number) Promise~Booking~
+        +update(customerId: number, id: number, patch: BookingPatch) Promise~Booking~
+        +cancel(customerId: number, id: number) Promise~Booking~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+        +canActivate(ctx: ExecutionContext) boolean
+    }
+
+    class CreateBookingDto {
+        <<DTO>>
+        +checkIn: string
+        +checkOut: string
+        +adults: number
+        +children: number
+        +roomIds: number[]
+        +specialRequest?: string
+    }
+
+    BookingsModule --> BookingsController
+    BookingsModule --> BookingsService
+    BookingsController --> BookingsService
+    BookingsController ..> AuthGuard : protects
+    BookingsService ..> CreateBookingDto : consumes

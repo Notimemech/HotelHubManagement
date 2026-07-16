@@ -1,6 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { RoomType } from './room-type.entity';
 import { BookingDetail } from '../../bookings/entities/booking-detail.entity';
+import { ChecklistLog } from '../../housekeeping/entities/checklist-log.entity';
+import { IssueReport } from '../../maintenance/entities/issue-report.entity';
 
 @Entity('Rooms')
 export class Room {
@@ -24,5 +33,11 @@ export class Room {
   roomType: RoomType;
 
   @OneToMany(() => BookingDetail, (bookingDetail) => bookingDetail.room)
-  bookingDetails: BookingDetail[];
+  bookingDetails!: BookingDetail[];
+
+  @OneToMany(() => ChecklistLog, (log) => log.room)
+  checklistLogs!: ChecklistLog[];
+
+  @OneToMany(() => IssueReport, (issue) => issue.room)
+  issueReports!: IssueReport[];
 }

@@ -1,0 +1,278 @@
+---
+title: HotelHubManagement - Domain Model (DDD)
+---
+classDiagram
+    direction LR
+
+    %% ============================================================
+    %% Identity BC
+    %% ============================================================
+    class Account {
+        <<AggregateRoot>>
+        -accountId: number
+        -username: string
+        -password: string
+        -isActive: boolean
+        -createdAt: Date
+        +grantRole(role)
+        +revokeRole(role)
+        +deactivate()
+    }
+
+    class Role {
+        <<ValueObject>>
+        -roleId: number
+        -roleName: string
+        -description: string
+    }
+
+    %% ============================================================
+    %% Customer Management BC
+    %% ============================================================
+    class Customer {
+        <<AggregateRoot>>
+        -customerId: number
+        -fullName: string
+        -email: string
+        -phone: string
+        -avatar: string
+        -createdAt: Date
+        +registerProfile()
+        +updateContact()
+        +addBankAccount(bank)
+    }
+
+    class CustomerBankAccount {
+        <<Entity>>
+        -bankId: number
+        -bankName: string
+        -accountNumber: string
+        -accountHolderName: string
+        -isDefault: boolean
+        +markAsDefault()
+    }
+
+    %% ============================================================
+    %% Staff BC
+    %% ============================================================
+    class StaffInfo {
+        <<AggregateRoot>>
+        -staffId: number
+        -cccd: string
+        -fullName: string
+        -birthDate: Date
+        -phone: string
+        -address: string
+        +updateContact()
+    }
+
+    %% ============================================================
+    %% Room Catalogue BC
+    %% ============================================================
+    class RoomType {
+        <<AggregateRoot>>
+        -typeId: number
+        -typeName: string
+        -description: string
+        -price: number
+        -maxGuests: number
+        +changePrice(newPrice)
+        +describe()
+    }
+
+    class Room {
+        <<Entity>>
+        -roomId: number
+        -roomCode: string
+        -floor: number
+        -status: RoomStatus
+        +markAvailable()
+        +markOccupied()
+        +sendToMaintenance()
+    }
+
+    class RoomStatus {
+        <<Enum>>
+        AVAILABLE
+        OCCUPIED
+        MAINTENANCE
+    }
+
+    %% ============================================================
+    %% Booking Lifecycle BC
+    %% ============================================================
+    class Booking {
+        <<AggregateRoot>>
+        -bookingId: number
+        -currentVersion: number
+        -totalPrice: number
+        -status: BookingStatus
+        -isDeleted: boolean
+        +confirm()
+        +cancel()
+        +complete()
+        +softDelete()
+        +snapshotAsVersion(staff, reason) BookingVersion
+        +latestVersion() BookingVersion
+        +history() BookingVersion[]
+    }
+
+    class BookingVersion {
+        <<Entity>>
+        -versionId: number
+        -versionNumber: number
+        -totalAmount: number
+        -changeReason: string
+        -evidenceImage: string
+        -createdAt: Date
+    }
+
+    class BookingDetail {
+        <<Entity>>
+        -bookingDetailId: number
+        -price: number
+        -nights: number
+    }
+
+    class BookingStatus {
+        <<Enum>>
+        PENDING
+        CONFIRMED
+        CANCELLED
+        COMPLETED
+    }
+
+    class BookingCreated {
+        <<DomainEvent>>
+        +bookingId: number
+        +customerId: number
+        +occurredAt: Date
+    }
+
+    class BookingConfirmed {
+        <<DomainEvent>>
+        +bookingId: number
+        +occurredAt: Date
+    }
+
+    %% ============================================================
+    %% Payment Settlement BC
+    %% ============================================================
+    class Payment {
+        <<AggregateRoot>>
+        -paymentId: number
+        -amount: number
+        -method: PaymentMethod
+        -status: PaymentStatus
+        -externalTransactionId: string
+        -paidAt: Date
+        +markPaid()
+        +markFailed()
+        +refund(amount, bank) Payment
+    }
+
+    class PaymentMethod {
+        <<Enum>>
+        CASH
+        VISA
+        MOMO
+        VNPAY
+    }
+
+    class PaymentStatus {
+        <<Enum>>
+        PENDING
+        PAID
+        FAILED
+    }
+
+    %% ============================================================
+    %% Ancillary Services BC
+    %% ============================================================
+    class Service {
+        <<AggregateRoot>>
+        -serviceId: number
+        -serviceName: string
+        -price: number
+    }
+
+    class BookingService {
+        <<Entity>>
+        -bookingServiceId: number
+        -quantity: number
+        +subtotal() number
+    }
+
+    %% ============================================================
+    %% Housekeeping BC
+    %% ============================================================
+    class ChecklistTemplate {
+        <<AggregateRoot>>
+        -templateId: number
+        -templateType: string
+        -itemName: string
+        -description: string
+    }
+
+    class ChecklistLog {
+        <<Entity>>
+        -logId: number
+        -logTime: Date
+        -evidenceImage: string
+        -notes: string
+    }
+
+    %% ============================================================
+    %% Maintenance BC
+    %% ============================================================
+    class IssueReport {
+        <<AggregateRoot>>
+        -issueId: number
+        -description: string
+        -issueImage: string
+        -status: IssueStatus
+        -createdAt: Date
+        +resolve(prove)
+    }
+
+    class IssueStatus {
+        <<Enum>>
+        PENDING
+        RESOLVED
+    }
+
+    class MaintenanceProve {
+        <<Entity>>
+        -proveId: number
+        -finishImage: string
+        -finishVideo: string
+        -resolvedAt: Date
+    }
+
+    %% ============================================================
+    %% Relationships
+    %% ============================================================
+    Account       "1" --> "*" Role           : granted via
+    Account       "1" --> "0..1" Customer     : profiles
+    Account       "1" --> "0..1" StaffInfo    : profiles
+    Customer      "1" --> "*" CustomerBankAccount : owns
+    Customer      "1" --> "*" Booking        : places
+    RoomType      "1" --> "*" Room           : categorises
+    Booking       "1" --> "*" BookingVersion : evolves through
+    BookingVersion "1" --> "*" BookingDetail : snapshots
+    BookingVersion "1" --> "*" Payment       : captures txn
+    Booking       "1" --> "*" BookingService : consumes
+    Booking       "1" --> "*" Payment       : settled by
+    Room          "1" --> "*" BookingDetail  : assigned to
+    Room          "1" --> "*" ChecklistLog   : cleaned via
+    Room          "1" --> "*" IssueReport    : reported as faulty
+    Service       "1" --> "*" BookingService : supplied via
+    ChecklistTemplate "1" --> "*" ChecklistLog : instantiated by
+    IssueReport   "1" --> "*" MaintenanceProve : resolved by
+    StaffInfo     "1" --> "*" BookingVersion : in charge of
+    StaffInfo     "1" --> "*" ChecklistLog   : performs
+    StaffInfo     "1" --> "*" IssueReport    : reports
+    StaffInfo     "1" --> "*" MaintenanceProve : resolves
+
+    Booking       ..> BookingCreated     : emits
+    Booking       ..> BookingConfirmed   : emits

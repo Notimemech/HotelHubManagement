@@ -1,0 +1,38 @@
+---
+title: Services Module - Class Diagram
+---
+classDiagram
+    class ServicesModule {
+        <<Module>>
+    }
+
+    class ServicesController {
+        <<Controller>>
+        -servicesService: ServicesService
+        +findAll() Promise~Service[]~
+        +create(dto: CreateServiceDto) Promise~Service~
+    }
+
+    class ServicesService {
+        <<Service>>
+        -serviceRepo: Repository~Service~
+        -bookingRepo: Repository~Booking~
+        +findAll() Promise~Service[]~
+        +create(dto: CreateServiceDto) Promise~Service~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+    }
+
+    class CreateServiceDto {
+        <<DTO>>
+        +serviceName: string
+        +price: number
+    }
+
+    ServicesModule --> ServicesController
+    ServicesModule --> ServicesService
+    ServicesController --> ServicesService
+    ServicesController ..> AuthGuard : protects
+    ServicesService ..> CreateServiceDto : consumes

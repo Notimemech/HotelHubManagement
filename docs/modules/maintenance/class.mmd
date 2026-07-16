@@ -1,0 +1,50 @@
+---
+title: Maintenance Module - Class Diagram
+---
+classDiagram
+    class MaintenanceModule {
+        <<Module>>
+    }
+
+    class MaintenanceController {
+        <<Controller>>
+        -maintenanceService: MaintenanceService
+        +reportIssue(dto: ReportIssueDto) Promise~IssueReport~
+        +listIssues() Promise~IssueReport[]~
+        +proveIssue(issueId: number, dto: ProveIssueDto) Promise~MaintenanceProve~
+        +listProves(issueId: number) Promise~MaintenanceProve[]~
+    }
+
+    class MaintenanceService {
+        <<Service>>
+        -issueRepo: Repository~IssueReport~
+        -proveRepo: Repository~MaintenanceProve~
+        +reportIssue(reporterId: number, dto: ReportIssueDto) Promise~IssueReport~
+        +listIssues() Promise~IssueReport[]~
+        +proveIssue(maintainerId: number, issueId: number, dto: ProveIssueDto) Promise~MaintenanceProve~
+        +listProves(issueId: number) Promise~MaintenanceProve[]~
+    }
+
+    class RolesGuard {
+        <<Guard>>
+    }
+
+    class ReportIssueDto {
+        <<DTO>>
+        +roomId: number
+        +description: string
+        +issueImage?: string
+    }
+
+    class ProveIssueDto {
+        <<DTO>>
+        +finishImage?: string
+        +finishVideo?: string
+    }
+
+    MaintenanceModule --> MaintenanceController
+    MaintenanceModule --> MaintenanceService
+    MaintenanceController --> MaintenanceService
+    MaintenanceController ..> RolesGuard : protects
+    MaintenanceService ..> ReportIssueDto : consumes
+    MaintenanceService ..> ProveIssueDto : consumes

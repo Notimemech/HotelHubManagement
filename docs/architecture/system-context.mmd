@@ -1,0 +1,24 @@
+---
+title: HotelHubManagement - System Context
+---
+flowchart LR
+    Guest((Customer))
+    Staff((Receptionist / Sales))
+    Admin((Manager))
+
+    subgraph System["HotelHubManagement"]
+        WebApp["Web Frontend<br/>(Next.js)"]
+        Api["Backend API<br/>(NestJS)"]
+        DB[("PostgreSQL")]
+    end
+
+    ExtPay["External Payment<br/>VNPay / Momo"]
+    ExtSms["SMS / Email Gateway<br/>(planned)"]
+
+    Guest  --> WebApp
+    Staff  --> WebApp
+    Admin  --> WebApp
+    WebApp --> Api
+    Api    --> DB
+    Api    -.-> ExtPay
+    Api    -.-> ExtSms

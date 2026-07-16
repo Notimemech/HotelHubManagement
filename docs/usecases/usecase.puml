@@ -1,0 +1,110 @@
+@startuml HotelHubManagement-UseCases
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+' ===== Actors =====
+actor "Guest"            as Guest
+actor "Customer"         as AuthCus
+actor "Manager"          as Mgr
+actor "Saler"            as Saler
+actor "Receptionist"     as Recep
+actor "Cleaner"          as Cleaner
+actor "Maintainer"       as Maint
+actor "Payment Gateway"  as PayGW
+
+' ===== Identity =====
+rectangle "Identity" as Id {
+    usecase "Register account"      as UC_Register
+    usecase "Login / Logout"        as UC_Login
+    usecase "Change password"       as UC_ChangePw
+    usecase "Register staff"        as UC_RegisterStaff
+    usecase "Assign role"           as UC_AssignRole
+}
+
+' ===== Customer Management =====
+rectangle "Customer Management" as CM {
+    usecase "Update profile"        as UC_UpdateProfile
+    usecase "Manage bank accounts"  as UC_Bank
+}
+
+' ===== Room Catalogue =====
+rectangle "Room Catalogue" as RC {
+    usecase "Browse rooms"          as UC_Browse
+    usecase "Check availability"    as UC_Avail
+    usecase "Manage rooms"          as UC_ManageRooms
+    usecase "Manage room types"     as UC_ManageTypes
+}
+
+' ===== Booking Lifecycle =====
+rectangle "Booking Lifecycle" as BL {
+    usecase "Create booking"        as UC_Book
+    usecase "View my bookings"      as UC_ViewBookings
+    usecase "Cancel booking"        as UC_CancelBooking
+    usecase "Modify booking"        as UC_ModifyBooking
+    usecase "View booking history"  as UC_BookHistory
+}
+
+' ===== Payment Settlement =====
+rectangle "Payment Settlement" as PS {
+    usecase "Record payment"        as UC_Pay
+    usecase "Refund payment"        as UC_Refund
+}
+
+' ===== Ancillary Services =====
+rectangle "Ancillary Services" as AS {
+    usecase "Browse services"       as UC_BrowseSvc
+    usecase "Add service to booking" as UC_AddSvc
+}
+
+' ===== Housekeeping =====
+rectangle "Housekeeping" as HK {
+    usecase "Create checklist template" as UC_CreateTpl
+    usecase "Log checklist completion"  as UC_LogChk
+}
+
+' ===== Maintenance =====
+rectangle "Maintenance" as Mx {
+    usecase "Report room issue"    as UC_Report
+    usecase "Prove fix completed"  as UC_Prove
+}
+
+' ===== Associations =====
+Guest  --> UC_Register
+Guest  --> UC_Login
+Guest  --> UC_Browse
+Guest  --> UC_Avail
+Guest  --> UC_BrowseSvc
+
+AuthCus --> UC_ChangePw
+AuthCus --> UC_UpdateProfile
+AuthCus --> UC_Bank
+AuthCus --> UC_Book
+AuthCus --> UC_ViewBookings
+AuthCus --> UC_CancelBooking
+AuthCus --> UC_ModifyBooking
+AuthCus --> UC_AddSvc
+AuthCus --> UC_BookHistory
+
+Mgr    --> UC_RegisterStaff
+Mgr    --> UC_AssignRole
+Mgr    --> UC_Refund
+Saler  --> UC_ManageRooms
+Saler  --> UC_ManageTypes
+Saler  --> UC_Pay
+Recep  --> UC_ManageRooms
+Cleaner --> UC_LogChk
+Maint  --> UC_Prove
+Cleaner --> UC_Report
+
+PayGW  --> UC_Pay    : confirms
+PayGW  --> UC_Refund : settles
+
+UC_Book     ..> UC_Avail : <<include>>
+UC_Pay      ..> UC_Book  : <<include>>
+UC_AddSvc   ..> UC_Book  : <<include>>
+UC_ModifyBooking ..> UC_Avail : <<include>>
+UC_Prove    ..> UC_Report : <<include>>
+
+@enduml

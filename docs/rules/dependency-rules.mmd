@@ -1,0 +1,18 @@
+---
+title: HotelHubManagement - Dependency Rules
+---
+flowchart LR
+    Controller["Controller\n(HTTP boundary)"] --> Application
+    Application["Application Service\n(bookings.service, ...)"] --> Domain
+    Application --> Infrastructure
+    Domain["Domain Entity\n(Customer, Booking, ...)"] -.-> Infrastructure
+    Infrastructure["Repository / TypeORM\n(Repository<T>)"] -.-> Controller
+    Infrastructure -.-> Domain
+
+    Controller -X-> Domain : "MUST NOT skip Application"
+    Domain -X-> Controller : "MUST NOT depend upward"
+    Domain -X-> Infrastructure : "MUST NOT depend on persistence"
+
+    classDef allowed fill:#dcfce7,stroke:#16a34a
+    classDef forbidden fill:#fee2e2,stroke:#dc2626
+    class Controller,Application,Domain,Infrastructure allowed

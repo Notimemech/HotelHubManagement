@@ -1,9 +1,16 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Account } from '../accounts/entities/account.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { AccountsService } from '../accounts/accounts.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -11,61 +18,76 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectRepository(Account)
+    private readonly accountRepo: Repository<Account>,
     @InjectRepository(Customer)
     private readonly customerRepo: Repository<Customer>,
-    private jwtService: JwtService
+    private readonly accountsService: AccountsService,
+    private readonly jwtService: JwtService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.customerRepo.findOne({
-      where: [{ Email: dto.Email }, { Phone: dto.Phone }]
+    const existing = await this.accountRepo.findOne({
+      where: { Username: dto.Username },
     });
-    if (existing) throw new BadRequestException('Email or Phone already exists');
+    if (existing) throw new ConflictException('Username already taken');
 
-    const hashedPassword = await bcrypt.hash(dto.Password, 10);
-    const newCustomer = this.customerRepo.create({
-      FullName: dto.FullName,
-      Email: dto.Email,
-      Phone: dto.Phone,
-      Password: hashedPassword,
-    });
-    const savedCustomer = await this.customerRepo.save(newCustomer);
-    
+    const hash = await bcrypt.hash(dto.Password, 10);
+    const account = await this.accountsService.create(dto.Username, hash);
+    await this.accountsService.setRole(account.AccountId, 'User');
+
+    const customer = await this.customerRepo.save(
+      this.customerRepo.create({
+        AccountId: account.AccountId,
+        FullName: dto.FullName,
+        Email: dto.Email,
+        Phone: dto.Phone,
+      }),
+    );
+
     return {
       message: 'Registered successfully',
-      CustomerId: savedCustomer.CustomerId
+      CustomerId: customer.CustomerId,
     };
   }
 
   async login(dto: LoginDto) {
-    const customer = await this.customerRepo.findOne({
-      where: [{ Email: dto.Username }, { Phone: dto.Username }]
+    const account = await this.accountRepo.findOne({
+      where: { Username: dto.Username },
     });
-    if (!customer) throw new UnauthorizedException('Invalid credentials');
+    if (!account || !account.IsActive)
+      throw new UnauthorizedException('Invalid credentials');
 
-    const isMatch = await bcrypt.compare(dto.Password, customer.Password);
+    const isMatch = await bcrypt.compare(dto.Password, account.Password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const payload = { sub: customer.CustomerId, email: customer.Email };
-    return {
-      access_token: await this.jwtService.signAsync(payload)
+    const roles = await this.accountsService.getRoles(account.AccountId);
+    const role = roles[0]?.RoleName ?? 'User';
+
+    const payload = {
+      sub: account.AccountId,
+      username: account.Username,
+      role,
     };
+    return { access_token: await this.jwtService.signAsync(payload) };
   }
 
   logout() {
     return { message: 'Logged out successfully' };
   }
 
-  async changePassword(customerId: number, dto: ChangePasswordDto) {
-    const customer = await this.customerRepo.findOne({ where: { CustomerId: customerId } });
-    if (!customer) throw new BadRequestException('Customer not found');
+  async changePassword(accountId: number, dto: ChangePasswordDto) {
+    const account = await this.accountRepo.findOne({
+      where: { AccountId: accountId },
+    });
+    if (!account) throw new BadRequestException('Account not found');
 
-    const isMatch = await bcrypt.compare(dto.OldPassword, customer.Password);
+    const isMatch = await bcrypt.compare(dto.OldPassword, account.Password);
     if (!isMatch) throw new UnauthorizedException('Old password incorrect');
 
-    customer.Password = await bcrypt.hash(dto.NewPassword, 10);
-    await this.customerRepo.save(customer);
-    
+    account.Password = await bcrypt.hash(dto.NewPassword, 10);
+    await this.accountRepo.save(account);
     return { message: 'Password changed successfully' };
   }
 }

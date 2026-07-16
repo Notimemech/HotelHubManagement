@@ -1,0 +1,21 @@
+---
+title: Accounts Module - Class Diagram
+---
+classDiagram
+    class AccountsModule {
+        <<Module>>
+    }
+
+    class AccountsService {
+        <<Service>>
+        -accountRepo: Repository~Account~
+        -accountRoleRepo: Repository~AccountRole~
+        -roleRepo: Repository~Role~
+        +create(username: string, passwordHash: string) Promise~Account~
+        +findByUsername(username: string) Promise~Account~
+        +findById(id: number) Promise~Account~
+        +getRoles(accountId: number) Promise~Role[]~
+        +setRole(accountId: number, roleName: string) Promise~void~
+    }
+
+    AccountsModule --> AccountsService

@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  ValidationPipe,
+} from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -11,7 +22,7 @@ export class RoomsController {
   checkAvailability(
     @Query('checkIn') checkIn: string,
     @Query('checkOut') checkOut: string,
-    @Query('guests') guests: number
+    @Query('guests') guests: number,
   ) {
     return this.roomsService.checkAvailability(checkIn, checkOut, guests);
   }
@@ -27,12 +38,19 @@ export class RoomsController {
   }
 
   @Post()
-  create(@Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) dto: CreateRoomDto) {
+  create(
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    dto: CreateRoomDto,
+  ) {
     return this.roomsService.create(dto);
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) dto: UpdateRoomDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    dto: UpdateRoomDto,
+  ) {
     return this.roomsService.update(id, dto);
   }
 
