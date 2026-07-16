@@ -1,91 +1,26 @@
 @import "tailwindcss";
 
-/* ----------------------------------------------------------------------------
- * Editorial palette — warm linen background, brass accents.
- * Keeping light-mode everything only; the site intentionally never goes dark
- * because the aesthetic depends on cream tones.
- * ponytail: tighten the palette when brand guidelines are finalized; switch
- * the brass range to a value-driven scale (50..900) once we add accessibility
- * passes.
- * -------------------------------------------------------------------------- */
 :root {
-  --linen-50: #fbf8f3;
-  --linen-100: #f4ece0;
-  --linen-200: #e9ddc8;
-  --linen-300: #d8c6a3;
-  --linen-400: #b89a6e;
-
-  --ink-900: #2a1f14;
-  --ink-700: #4a3a28;
-  --ink-500: #6b5740;
-  --ink-400: #8a755c;
-
-  --brass-50: #f7efd8;
-  --brass-100: #ecdc9a;
-  --brass-300: #c89b46;
-  --brass-500: #a47521;
-  --brass-700: #7a540f;
-
-  --paper: var(--linen-50);
-  --foreground: var(--ink-900);
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
 @theme inline {
-  --color-background: var(--paper);
+  --color-background: var(--background);
   --color-foreground: var(--foreground);
-
-  --color-linen-50: var(--linen-50);
-  --color-linen-100: var(--linen-100);
-  --color-linen-200: var(--linen-200);
-  --color-linen-300: var(--linen-300);
-  --color-linen-400: var(--linen-400);
-
-  --color-ink-900: var(--ink-900);
-  --color-ink-700: var(--ink-700);
-  --color-ink-500: var(--ink-500);
-  --color-ink-400: var(--ink-400);
-
-  --color-brass-50: var(--brass-50);
-  --color-brass-100: var(--brass-100);
-  --color-brass-300: var(--brass-300);
-  --color-brass-500: var(--brass-500);
-  --color-brass-700: var(--brass-700);
-
   --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
 }
 
-html,
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
 body {
-  background: var(--paper);
+  background: var(--background);
   color: var(--foreground);
-}
-
-body {
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Editorial serif utility — used inline via className for hero & section titles. */
-.font-editorial {
-  font-family: var(--font-fraunces), "Times New Roman", Georgia, serif;
-  font-feature-settings: "ss01", "ss02";
-  letter-spacing: -0.01em;
-}
-
-/* Subtle paper-grain texture; cheap to render, intentional noise. */
-.bg-linen-grain {
-  background-color: var(--linen-50);
-  background-image: radial-gradient(
-    rgba(184, 154, 110, 0.08) 1px,
-    transparent 1px
-  );
-  background-size: 3px 3px;
-}
-
-/* Section rule — a thin brass hairline used to bracket editorial sections. */
-.rule-brass {
-  border-color: var(--brass-300);
+  font-family: Arial, Helvetica, sans-serif;
 }

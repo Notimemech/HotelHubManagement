@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { apiFetch } from './api';
-import { adaptLoginResponse, decodeToken, tokenStorage } from './auth';
-import type { LoginResponse } from './types';
+import React, { createContext, useContext, useState } from "react";
+import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
+import { apiRequest } from "./api";
+
+interface DecodedToken {
+  sub: string;
+  username: string;
+  role: string;
+  exp: number;
+}
 
 interface User {
   accountId: string;
@@ -16,29 +22,28 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (
-    fields: Record<string, string>,
-  ) => Promise<{ message: string; customerId: string }>;
+  register: (fields: Record<string, string>) => Promise<{ message: string; customerId: string }>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function readInitialUser(): User | null {
-  const token = tokenStorage.getAccessToken();
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("token");
   if (!token) return null;
   try {
-    const decoded = decodeToken(token);
-    if (decoded && decoded.exp * 1000 > Date.now()) {
+    const decoded = jwtDecode<DecodedToken>(token);
+    if (decoded.exp * 1000 > Date.now()) {
       return {
         accountId: decoded.sub,
         username: decoded.username,
         role: decoded.role,
       };
     }
-    tokenStorage.clear();
+    localStorage.removeItem("token");
   } catch {
-    tokenStorage.clear();
+    localStorage.removeItem("token");
   }
   return null;
 }
@@ -48,63 +53,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const login = async (username: string, password: string) => {
-    const res = await apiFetch<LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: { username, password },
-      skipAuthRedirect: true,
+    const res = await apiRequest<{ access_token: string }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
     });
 
-    const tokens = adaptLoginResponse(res);
-    tokenStorage.saveTokens(tokens);
-
-    const decoded = decodeToken(tokens.accessToken);
-    const authedUser: User = {
-      accountId: decoded?.sub ?? '',
-      username: decoded?.username ?? username,
-      role: decoded?.role ?? 'User',
+    const token = res.access_token;
+    localStorage.setItem("token", token);
+    const decoded = jwtDecode<DecodedToken>(token);
+    const authedUser = {
+      accountId: decoded.sub,
+      username: decoded.username,
+      role: decoded.role,
     };
-    tokenStorage.saveUser(authedUser);
     setUser(authedUser);
 
-    if (['Manager', 'Receptionist', 'Saler'].includes(authedUser.role)) {
-      router.push('/admin');
-    } else if (['Cleaner', 'Maintainer'].includes(authedUser.role)) {
-      router.push('/tasks');
+    if (authedUser.role === "Manager" || authedUser.role === "Receptionist" || authedUser.role === "Saler") {
+      router.push("/admin");
+    } else if (authedUser.role === "Cleaner" || authedUser.role === "Maintainer") {
+      router.push("/tasks");
     } else {
-      router.push('/dashboard');
+      router.push("/");
     }
   };
 
   const register = async (fields: Record<string, string>) => {
-    return apiFetch<{ message: string; customerId: string }>('/auth/register', {
-      method: 'POST',
-      body: fields,
+    return apiRequest<{ message: string; customerId: string }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(fields),
     });
   };
 
-  const logout = async () => {
-    const refresh = tokenStorage.getRefreshToken();
-    try {
-      if (refresh) {
-        await apiFetch('/auth/logout', {
-          method: 'POST',
-          body: { refreshToken: refresh },
-          skipAuthRedirect: true,
-        });
-      }
-    } catch {
-      // non-fatal
-    } finally {
-      tokenStorage.clear();
-      setUser(null);
-      router.push('/login');
-    }
+  const logout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    router.push("/login");
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, loading: false, login, register, logout }}
-    >
+    <AuthContext.Provider value={{ user, loading: false, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -112,6 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

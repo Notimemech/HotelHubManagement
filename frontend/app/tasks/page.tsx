@@ -14,16 +14,9 @@ export default function TasksPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-      return;
-    }
+    if (!loading && !user) router.push("/login");
     if (!loading && user && !ALLOWED.includes(user.role)) {
-      if (user.role === "Manager" || user.role === "Receptionist" || user.role === "Saler") {
-        router.push("/admin");
-      } else {
-        router.push("/");
-      }
+      router.push(ALLOWED.includes(user.role) ? "/tasks" : "/");
     }
   }, [user, loading, router]);
 
