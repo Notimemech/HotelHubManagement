@@ -3,8 +3,10 @@ import {
   IsString,
   IsOptional,
   IsDateString,
+  IsIn,
   MinLength,
 } from 'class-validator';
+import { ROLES } from '../../accounts/roles.constants';
 
 export class RegisterStaffDto {
   @IsString()
@@ -37,5 +39,6 @@ export class RegisterStaffDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsIn(ROLES as unknown as string[])
   role!: string;
 }

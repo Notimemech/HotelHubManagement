@@ -18,6 +18,7 @@ import { AccountsService } from '../accounts/accounts.service';
 import { StaffService } from '../staff/staff.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { CreateWalkInBookingDto } from './dto/create-walk-in-booking.dto';
+import { ListBookingsFilterDto } from './dto/list-bookings-filter.dto';
 
 @Injectable()
 export class BookingsService {
@@ -294,5 +295,113 @@ export class BookingsService {
     booking.status = 'Cancelled';
     await this.bookingRepo.save(booking);
     return { message: 'Booking cancelled' };
+  }
+
+  /* ============================================================
+   * Manager / Receptionist / Saler scoped views
+   * ============================================================ */
+
+  async findAllForStaff(filter: ListBookingsFilterDto) {
+    const qb = this.bookingRepo
+      .createQueryBuilder('b')
+      .leftJoinAndSelect('b.customer', 'customer')
+      .leftJoinAndSelect('b.versions', 'v')
+      .leftJoinAndSelect('v.details', 'd')
+      .leftJoinAndSelect('d.room', 'room')
+      .leftJoinAndSelect('b.payments', 'payments')
+      .orderBy('b.BookingDate', 'DESC');
+
+    if (filter.status) {
+      qb.andWhere('b.Status = :status', { status: filter.status });
+    }
+    if (filter.from) {
+      qb.andWhere('b.BookingDate >= :from', { from: filter.from });
+    }
+    if (filter.to) {
+      qb.andWhere('b.BookingDate <= :to', { to: filter.to });
+    }
+    if (filter.q) {
+      qb.andWhere(
+        '(customer.FullName LIKE :q OR customer.Phone LIKE :q)',
+        { q: `%${filter.q}%` },
+      );
+    }
+    return qb.getMany();
+  }
+
+  async findOneForStaff(bookingId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { bookingId },
+      relations: {
+        customer: true,
+        versions: {
+          details: { room: { roomType: true } },
+          payments: true,
+          staffInCharge: true,
+        },
+        payments: true,
+        services: { service: true },
+      },
+      order: { versions: { versionNumber: 'ASC' } },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    return booking;
+  }
+
+  async listVersionsForStaff(bookingId: string) {
+    const booking = await this.bookingRepo.findOne({
+      where: { bookingId },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    return this.versionRepo.find({
+      where: { bookingId },
+      relations: {
+        details: { room: true },
+        payments: true,
+        staffInCharge: true,
+      },
+      order: { versionNumber: 'ASC' },
+    });
+  }
+
+  async checkout(bookingId: string) {
+    return this.dataSource.transaction(async (manager) => {
+      const booking = await manager.findOne(Booking, {
+        where: { bookingId },
+        relations: { versions: { details: true } },
+      });
+      if (!booking) throw new NotFoundException('Booking not found');
+      if (booking.status === 'Cancelled') {
+        throw new BadRequestException('Cannot check out a cancelled booking');
+      }
+      if (booking.status === 'Completed') {
+        throw new BadRequestException('Booking is already completed');
+      }
+
+      booking.status = 'Completed';
+      await manager.save(booking);
+
+      const roomIds = new Set<string>();
+      booking.versions?.forEach((v) => {
+        v.details?.forEach((d) => roomIds.add(d.roomId));
+      });
+
+      for (const roomId of roomIds) {
+        const overlapping = await manager
+          .createQueryBuilder(BookingVersion, 'v')
+          .innerJoin('v.details', 'd')
+          .innerJoin(Booking, 'b', 'b.BookingId = v.BookingId')
+          .where('d.RoomId = :roomId', { roomId })
+          .andWhere('b.BookingId <> :bookingId', { bookingId })
+          .andWhere("b.Status IN ('Pending', 'Confirmed')")
+          .getCount();
+
+        if (overlapping === 0) {
+          await manager.update(Room, { roomId }, { status: 'Available' });
+        }
+      }
+
+      return { message: 'Booking checked out', bookingId, completedAt: new Date() };
+    });
   }
 }

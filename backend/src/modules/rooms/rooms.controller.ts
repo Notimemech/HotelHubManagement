@@ -7,11 +7,14 @@ import {
   Patch,
   Post,
   Query,
-  ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { AuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('rooms')
 export class RoomsController {
@@ -21,9 +24,13 @@ export class RoomsController {
   checkAvailability(
     @Query('checkIn') checkIn: string,
     @Query('checkOut') checkOut: string,
-    @Query('guests') guests: number,
+    @Query('guests') guests: string,
   ) {
-    return this.roomsService.checkAvailability(checkIn, checkOut, guests);
+    return this.roomsService.checkAvailability(
+      checkIn,
+      checkOut,
+      guests ? Number(guests) : undefined,
+    );
   }
 
   @Get()
@@ -36,23 +43,29 @@ export class RoomsController {
     return this.roomsService.findOne(id);
   }
 
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('Manager')
   @Post()
-  create(
-    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    dto: CreateRoomDto,
-  ) {
+  create(@Body() dto: CreateRoomDto) {
     return this.roomsService.create(dto);
   }
 
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('Manager')
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-    dto: UpdateRoomDto,
-  ) {
+  update(@Param('id') id: string, @Body() dto: UpdateRoomDto) {
     return this.roomsService.update(id, dto);
   }
 
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('Manager', 'Receptionist')
+  @Patch(':id/status')
+  setStatus(@Param('id') id: string, @Body('status') status: string) {
+    return this.roomsService.setStatus(id, status);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('Manager')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.roomsService.remove(id);

@@ -83,8 +83,7 @@ export class AuthService {
     const isMatch = await bcrypt.compare(dto.password, account.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const roles = await this.accountsService.getRoles(account.accountId);
-    const role = roles[0]?.roleName ?? 'User';
+    const role = account.role ?? 'User';
 
     const accessToken = await this.signAccessToken(account, role);
     const rawRefreshToken = this.generateRefreshToken();
@@ -129,8 +128,7 @@ export class AuthService {
 
     await this.refreshTokenRepo.remove(record);
 
-    const roles = await this.accountsService.getRoles(account.accountId);
-    const role = roles[0]?.roleName ?? 'User';
+    const role = account.role ?? 'User';
 
     const newAccessToken = await this.signAccessToken(account, role);
     const newRawRefreshToken = this.generateRefreshToken();
