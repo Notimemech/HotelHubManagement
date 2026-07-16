@@ -2,15 +2,22 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, QueryFailedError } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Booking } from './entities/booking.entity';
 import { BookingVersion } from './entities/booking-version.entity';
 import { BookingDetail } from './entities/booking-detail.entity';
 import { Room } from '../rooms/entities/room.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { Account } from '../accounts/entities/account.entity';
+import { AccountsService } from '../accounts/accounts.service';
+import { StaffService } from '../staff/staff.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreateWalkInBookingDto } from './dto/create-walk-in-booking.dto';
 
 @Injectable()
 export class BookingsService {
@@ -22,6 +29,9 @@ export class BookingsService {
     private detailRepo: Repository<BookingDetail>,
     @InjectRepository(Room) private roomRepo: Repository<Room>,
     @InjectRepository(Customer) private customerRepo: Repository<Customer>,
+    @InjectRepository(Account) private accountRepo: Repository<Account>,
+    private readonly accountsService: AccountsService,
+    private readonly staffService: StaffService,
     private dataSource: DataSource,
   ) {}
 
@@ -36,18 +46,24 @@ export class BookingsService {
     return c.customerId;
   }
 
-  async create(accountId: string, dto: CreateBookingDto) {
-    const customerId = await this.resolveCustomerId(accountId);
+  /**
+   * Core booking-insert transaction. Reused by both self-bookings (Customer)
+   * and walk-in bookings (Receptionist on behalf of guest).
+   */
+  private async createBookingForCustomer(
+    customerId: string,
+    dto: CreateBookingDto,
+    opts?: { staffInChargeId?: string; changeReason?: string },
+  ) {
+    const checkIn = new Date(dto.checkIn);
+    const checkOut = new Date(dto.checkOut);
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const checkIn = new Date(dto.checkIn);
-      const checkOut = new Date(dto.checkOut);
-      const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
-      const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-
       const rooms = await queryRunner.manager.find(Room, {
         where: { roomId: In(dto.roomIds) },
         relations: { roomType: true },
@@ -78,7 +94,10 @@ export class BookingsService {
         children: dto.children,
         specialRequest: dto.specialRequest,
         totalAmountAtThisVersion: totalPrice,
-        changeReason: 'Đặt phòng qua App',
+        ...(opts?.staffInChargeId
+          ? { staffInChargeId: opts.staffInChargeId }
+          : {}),
+        changeReason: opts?.changeReason ?? 'Đặt phòng qua App',
       });
       const savedVersion = await queryRunner.manager.save(version);
 
@@ -94,13 +113,90 @@ export class BookingsService {
       }
 
       await queryRunner.commitTransaction();
-      return { message: 'Booking created', bookingId: savedBooking.bookingId };
+      return { bookingId: savedBooking.bookingId };
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async create(accountId: string, dto: CreateBookingDto) {
+    const customerId = await this.resolveCustomerId(accountId);
+    const { bookingId } = await this.createBookingForCustomer(customerId, dto);
+    return { message: 'Booking created', bookingId };
+  }
+
+  /**
+   * Walk-in booking: receptionist creates a Booking on behalf of a guest who
+   * does not yet have an account. The guest is auto-registered with a stub
+   * Account (username = walkin_<phone>) so the existing UNIQUE NOT NULL FK on
+   * Customers.AccountId remains satisfied. Returns the new bookingId,
+   * customerId and an isNewCustomer flag.
+   */
+  async createWalkIn(
+    receptionistAccountId: string,
+    dto: CreateWalkInBookingDto,
+  ) {
+    // 1. Verify caller is a staff member and resolve their StaffInfo.
+    const staff = await this.staffService.findByAccountId(receptionistAccountId);
+    if (!staff) throw new ForbiddenException('Not a staff member');
+
+    // 2. Upsert Customer by phone; create stub Account if new.
+    let customer = await this.customerRepo.findOne({
+      where: { phone: dto.customerPhone },
+    });
+    let isNewCustomer = false;
+
+    if (!customer) {
+      try {
+        customer = await this.dataSource.transaction(async (manager) => {
+          const placeholderPassword = await bcrypt.hash(
+            `walkin_${Date.now()}_${Math.random()}`,
+            10,
+          );
+          const stubAccount = await this.accountsService.create(
+            `walkin_${dto.customerPhone}`,
+            placeholderPassword,
+          );
+          await this.accountsService.setRole(stubAccount.accountId, 'User');
+          return manager.save(
+            manager.create(Customer, {
+              accountId: stubAccount.accountId,
+              fullName: dto.customerFullName,
+              email: dto.customerEmail,
+              phone: dto.customerPhone,
+            }),
+          );
+        });
+        isNewCustomer = true;
+      } catch (err) {
+        if (err instanceof QueryFailedError) {
+          throw new ConflictException(
+            'Customer with this phone/email already exists',
+          );
+        }
+        throw err;
+      }
+    }
+
+    // 3. Run the shared booking-insert transaction, tagging the receptionist.
+    const { bookingId } = await this.createBookingForCustomer(
+      customer!.customerId,
+      dto,
+      {
+        staffInChargeId: staff.staffId,
+        changeReason: 'Walk-in booking by Receptionist',
+      },
+    );
+
+    return {
+      message: 'Walk-in booking created',
+      bookingId,
+      customerId: customer!.customerId,
+      isNewCustomer,
+    };
   }
 
   async findAll(accountId: string) {

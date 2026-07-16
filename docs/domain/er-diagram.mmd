@@ -1,214 +1,286 @@
 ---
-title: HotelHubManagement - Domain ER Diagram
+title: HotelHubManagement - Domain ER Diagram (v2 — Walk-in & Full State Machine)
 ---
 erDiagram
     direction LR
 
-    %% ============================================================
+    %% ============================================================================
+    %% DESIGN NOTES
+    %% --------------------------------------------------------------------------
+    %% This is v2 of the ERD, updated to reflect the new business redesign in
+    %% docs/business-redesign.md (5-role workflow) and docs/booking-state-machine.md
+    %% (6 booking states).
+    %%
+    %% Constraints applied:
+    %%  • The 18 tables already deployed (backend/src/modules/**/entities/*.ts)
+    %%    are kept intact — column names, types and cardinalities match the
+    %%    live code EXACTLY. Only enums inside existing columns are widened.
+    %%  • Where the new business logic would normally demand a new column
+    %%    (e.g. ActualCheckIn, ActualCheckOut), the column is listed in a
+    %%    separate "Optional additive columns" block at the bottom so it can
+    %%    be applied through a single targeted migration instead of rewriting
+    %%    existing tables.
+    %%  • No new tables are introduced — the new flows are encoded into the
+    %%    existing aggregates (Booking ↔ BookingVersion ↔ BookingDetail,
+    %%    IssueReport ↔ MaintenanceProve, ChecklistLog).
+    %% ============================================================================
+
+    %% ============================================================================
     %% Identity BC
-    %% ============================================================
+    %% ============================================================================
     ACCOUNT ||--o{ ACCOUNTROLE : "holds"
     ROLE    ||--o{ ACCOUNTROLE : "granted via"
 
     ACCOUNT {
-        int      AccountId PK
-        string   Username "UNIQUE"
-        string   Password
-        boolean  IsActive
-        datetime CreatedAt
+        uuid      accountId PK
+        string    username "UNIQUE"
+        string    password
+        boolean   isActive
+        datetime  createdAt
     }
 
     ROLE {
-        int    RoleId PK
-        string RoleName
-        string Description
+        uuid    roleId PK
+        string  roleName "User | Manager | Saler | Receptionist | Cleaner | Maintainer"
+        string  description
     }
 
     ACCOUNTROLE {
-        int AccountId FK
-        int RoleId FK
+        uuid accountId FK
+        uuid roleId FK
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Customer Management BC
-    %% ============================================================
-    ACCOUNT   ||--o| CUSTOMER : "profiles (1:1)"
+    %% ============================================================================
+    %% NOTE: A Customer row is ALWAYS tied 1:1 to an Account. For walk-in
+    %% guests the receptionist's createWalkIn() flow auto-creates a stub
+    %% Account (username = walkin_<phone>, role = User) and then a paired
+    %% Customer row in the same transaction. See business-redesign.md §2.2.
+    ACCOUNT   ||--o| CUSTOMER : "profiles 1:1 (incl. walk-in stub)"
     CUSTOMER  ||--o{ CUSTOMERBANKACCOUNT : "owns refund account"
-    CUSTOMER  ||--o{ BOOKING : "places"
+    CUSTOMER  ||--o{ BOOKING : "places (incl. walk-in)"
 
     CUSTOMER {
-        int      CustomerId PK
-        int      AccountId FK "UNIQUE"
-        string   FullName
-        string   Email "UNIQUE"
-        string   Phone "UNIQUE"
-        string   Avatar
-        datetime CreatedAt
+        uuid      customerId PK
+        uuid      accountId FK "UNIQUE — one account per customer"
+        string    fullName
+        string    email "UNIQUE, nullable"
+        string    phone "UNIQUE, nullable — key for walk-in upsert"
+        string    avatar
+        datetime  createdAt
     }
 
     CUSTOMERBANKACCOUNT {
-        int     BankId PK
-        int     CustomerId FK
-        string  BankName
-        string  AccountNumber
-        string  AccountHolderName
-        boolean IsDefault
+        uuid     bankId PK
+        uuid     customerId FK
+        string   bankName
+        string   accountNumber
+        string   accountHolderName
+        boolean  isDefault
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Staff BC
-    %% ============================================================
-    ACCOUNT ||--o| STAFFINFO : "profiles (1:1)"
+    %% ============================================================================
+    %% Manager is now scoped to room catalogue + prices ONLY
+    %% (no ChecklistTemplate management, no booking state changes).
+    ACCOUNT ||--o| STAFFINFO : "profiles 1:1 (Manager / Receptionist / Saler / Cleaner / Maintainer)"
     STAFFINFO ||--o{ BOOKINGVERSION    : "in charge of"
     STAFFINFO ||--o{ CHECKLISTLOG      : "performs"
     STAFFINFO ||--o{ ISSUEREPORT       : "reports"
     STAFFINFO ||--o{ MAINTENANCEPROVE  : "resolves"
 
     STAFFINFO {
-        int    StaffId PK
-        int    AccountId FK "UNIQUE"
-        string CCCD "UNIQUE"
-        string FullName
-        date   BirthDate
-        string Phone
-        string Address
+        uuid    staffId PK
+        uuid    accountId FK "UNIQUE"
+        string  cccd "UNIQUE"
+        string  fullName
+        date    birthDate
+        string  phone
+        string  address
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Room Catalogue BC
-    %% ============================================================
+    %% ============================================================================
+    %% Manager-only write surface (Rooms, RoomTypes, Prices).
+    %% Room.Status enum WIDENED to cover the Cleaning flow:
+    %%   Available | Occupied | Dirty | Cleaning | Maintenance
+    %% (was: Available | Occupied | Maintenance — two new states added in-place)
     ROOMTYPE ||--o{ ROOM : "categorises"
     ROOM ||--o{ BOOKINGDETAIL : "is reserved in"
     ROOM ||--o{ CHECKLISTLOG  : "is cleaned via"
     ROOM ||--o{ ISSUEREPORT   : "is reported as faulty in"
 
     ROOMTYPE {
-        int     TypeID PK
-        string  TypeName
-        string  Description
-        decimal Price
-        int     MaxGuests
+        uuid     typeId PK
+        string   typeName
+        string   description
+        decimal  price "Manager-managed"
+        int      maxGuests
     }
 
     ROOM {
-        int    RoomID PK
-        string RoomCode "UNIQUE"
-        int    TypeID FK
-        int    Floor
-        string Status "Available | Occupied | Maintenance"
+        uuid    roomId PK
+        string  roomCode "UNIQUE"
+        uuid    typeId FK
+        int     floor
+        string  status "Available | Occupied | Dirty | Cleaning | Maintenance"
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Booking Lifecycle BC
-    %% ============================================================
-    BOOKING       ||--o{ BOOKINGVERSION : "evolves through"
+    %% ============================================================================
+    %% 6-state machine — see booking-state-machine.md.
+    %% Status ENUM WIDENED in-place:
+    %%   Pending | Confirmed | CheckedIn | CheckedOut | Completed | Cancelled
+    %% (was: Pending | Confirmed | Cancelled | Completed)
+    %% Versioning: a change to Confirmed or CheckedIn booking APPENDS a new
+    %% BookingVersion row (CurrentVersion bumps). Payment for any price delta
+    %% is also appended (Status='Pending') without changing Booking.Status.
+    BOOKING       ||--o{ BOOKINGVERSION : "evolves through (append-only)"
     BOOKINGVERSION ||--|{ BOOKINGDETAIL : "snapshots rooms at"
-    BOOKINGVERSION ||--o{ PAYMENT       : "captures txn at"
+    BOOKINGVERSION ||--o{ PAYMENT       : "captures txn at (incl. deltas)"
     BOOKING       ||--o{ BOOKINGSERVICE : "consumes"
-    BOOKING       ||--o{ PAYMENT         : "is settled by"
+    BOOKING       ||--o{ PAYMENT         : "is settled by (incl. refund)"
+    BOOKING       }o--o{ STAFFINFO       : "CheckedInBy / CheckedOutBy (optional)"
 
     BOOKING {
-        int      BookingId PK
-        int      CustomerId FK
-        int      CurrentVersion
-        decimal  TotalPrice
-        string   Status "Pending | Confirmed | Cancelled | Completed"
-        boolean  IsDeleted
+        uuid      bookingId PK
+        uuid      customerId FK
+        int       currentVersion "→ max versionNumber"
+        decimal   totalPrice
+        string    status "Pending | Confirmed | CheckedIn | CheckedOut | Completed | Cancelled"
+        boolean   isDeleted
     }
 
     BOOKINGVERSION {
-        int      VersionId PK
-        int      BookingId FK
-        int      VersionNumber
-        decimal  TotalAmountAtThisVersion
-        int      StaffInCharge FK
-        string   ChangeReason
-        string   RequestEvidenceImage
-        datetime CreatedAt
+        uuid      versionId PK
+        uuid      bookingId FK
+        int       versionNumber
+        decimal   totalAmountAtThisVersion
+        uuid      staffInCharge FK "nullable — receptionist / sale"
+        string    changeReason "Đặt phòng qua App | Walk-in booking | Customer update | ..."
+        string    requestEvidenceImage
+        datetime  createdAt
     }
 
     BOOKINGDETAIL {
-        int     BookingDetailId PK
-        int     VersionId FK
-        int     RoomID FK
-        decimal Price
-        int     Nights
+        uuid     bookingDetailId PK
+        uuid     versionId FK
+        uuid     roomId FK
+        decimal  price
+        int      nights
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Payment Settlement BC
-    %% ============================================================
+    %% ============================================================================
+    %% Payment.Method WIDENED with 'Refund' to model refund as the reverse
+    %% direction of a payment without introducing a new table.
     PAYMENT {
-        int      PaymentId PK
-        int      VersionId FK
-        int      BookingId FK
-        decimal  Amount "negative => refund"
-        string   Method "Cash | Visa | Momo | VNPay"
-        string   Status "Pending | Paid | Failed"
-        string   ExternalTransactionID
-        datetime PaidAt
+        uuid      paymentId PK
+        uuid      versionId FK
+        uuid      bookingId FK
+        decimal   amount "negative or Method='Refund' for refunds"
+        string    method "Cash | Visa | Momo | VNPay | Refund"
+        string    status "Pending | Paid | Failed"
+        string    externalTransactionID
+        datetime  paidAt
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Ancillary Services BC
-    %% ============================================================
+    %% ============================================================================
     SERVICE ||--o{ BOOKINGSERVICE : "is purchased via"
 
     SERVICE {
-        int     ServiceId PK
-        string  ServiceName
-        decimal Price
+        uuid     serviceId PK
+        string   serviceName
+        decimal  price
     }
 
     BOOKINGSERVICE {
-        int BookingServiceId PK
-        int BookingId FK
-        int ServiceId FK
-        int Quantity
+        uuid bookingServiceId PK
+        uuid bookingId FK
+        uuid serviceId FK
+        int  quantity
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Housekeeping BC
-    %% ============================================================
-    CHECKLISTTEMPLATE ||--o{ CHECKLISTLOG : "instantiated by"
+    %% ============================================================================
+    %% Checklist templates are now SEED-ONLY (no Manager-side runtime CRUD).
+    %% Cleaner actions are still captured in ChecklistLog (which rooms were
+    %% cleaned and by whom).
+    CHECKLISTTEMPLATE ||--o{ CHECKLISTLOG : "instantiated by (read-only at runtime)"
 
     CHECKLISTTEMPLATE {
-        int    TemplateId PK
-        string TemplateType "Checkin | Checkout | CleaningStandard"
-        string ItemName
-        string Description
+        uuid    templateId PK
+        string  templateType "Checkin | Checkout | CleaningStandard"
+        string  itemName
+        string  description
     }
 
     CHECKLISTLOG {
-        int      LogId PK
-        int      RoomID FK
-        int      StaffId FK
-        string   TemplateType
-        datetime LogTime
-        string   EvidenceImage
-        string   Notes
+        uuid      logId PK
+        uuid      roomId FK
+        uuid      staffId FK
+        string    templateType
+        datetime  logTime
+        string    evidenceImage
+        string    notes
     }
 
-    %% ============================================================
+    %% ============================================================================
     %% Maintenance BC
-    %% ============================================================
+    %% ============================================================================
     ISSUEREPORT ||--o{ MAINTENANCEPROVE : "is resolved by"
 
     ISSUEREPORT {
-        int      IssueId PK
-        int      RoomID FK
-        int      ReporterId FK
-        string   Description
-        string   IssueImage
-        string   Status "Pending | Resolved"
-        datetime CreatedAt
+        uuid      issueId PK
+        uuid      roomId FK
+        uuid      reporterId FK "Cleaner | Receptionist | Customer"
+        string    description
+        string    issueImage
+        string    status "Pending | Resolved"
+        datetime  createdAt
     }
 
     MAINTENANCEPROVE {
-        int      ProveId PK
-        int      IssueId FK
-        int      MaintainerId FK
-        string   FinishImage
-        string   FinishVideo
-        datetime ResolvedAt
+        uuid      proveId PK
+        uuid      issueId FK
+        uuid      maintainerId FK
+        string    finishImage
+        string    finishVideo
+        datetime  resolvedAt
     }
+
+    %% ============================================================================
+    %% OPTIONAL ADDITIVE COLUMNS — single targeted migration only
+    %% --------------------------------------------------------------------------
+    %% These columns are NOT in the 18 deployed tables today. They are listed
+    %% here as the minimum set needed to fully implement the new flows in
+    %% booking-state-machine.md §5. Add them in ONE migration so we don't
+    %% rewrite the existing tables piecemeal:
+    %%
+    %%   Bookings
+    %%       + actualCheckIn       datetime  nullable  -- receptionist stamps at check-in
+    %%       + actualCheckOut      datetime  nullable  -- receptionist stamps at check-out
+    %%       + checkedInBy         uuid      nullable FK->StaffInfo
+    %%       + checkedOutBy        uuid      nullable FK->StaffInfo
+    %%       + checkInEvidence     nvarchar(MAX)     -- photo of check-in state
+    %%       + checkOutEvidence    nvarchar(MAX)     -- photo of check-out state
+    %%
+    %%   Bookings.Status CHECK constraint must be updated to include
+    %%       'CheckedIn' and 'CheckedOut' alongside the existing values.
+    %%
+    %%   Rooms.Status CHECK constraint must be updated to include
+    %%       'Dirty' and 'Cleaning' alongside the existing values.
+    %%
+    %% Until that migration runs the backend can already use the new enum
+    %% values in SQL (no CHECK on varchar columns) but the spec-listed
+    %% evidence columns will simply be NULL — cross-flow state machine
+    %% continues to work.
+    %% ============================================================================
