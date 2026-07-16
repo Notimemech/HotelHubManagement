@@ -45,7 +45,7 @@ export interface Staff {
   username: string;
   isActive: boolean;
   createdAt: string;
-  roles: string[];
+  role: string;
 }
 
 export interface Booking {

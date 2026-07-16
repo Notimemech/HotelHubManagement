@@ -80,7 +80,7 @@ export default function StaffPage() {
       phone: s.phone ?? "",
       address: s.address ?? "",
       birthDate: s.birthDate ? s.birthDate.slice(0, 10) : "",
-      role: s.roles[0] ?? "Receptionist",
+      role: s.role ?? "Receptionist",
       isActive: s.isActive,
     });
     setError(null);
@@ -89,7 +89,7 @@ export default function StaffPage() {
 
   const openRole = (s: Staff) => {
     setEditing(s);
-    setForm((f) => ({ ...f, role: s.roles[0] ?? "Receptionist" }));
+    setForm((f) => ({ ...f, role: s.role ?? "Receptionist" }));
     setError(null);
     setModal("role");
   };
@@ -164,7 +164,7 @@ export default function StaffPage() {
           { key: "fullName", label: "Họ tên" },
           { key: "username", label: "Tài khoản" },
           { key: "phone", label: "SĐT", render: (r) => r.phone ?? "—" },
-          { key: "role", label: "Vai trò", render: (r) => r.roles.join(", ") || "—" },
+          { key: "role", label: "Vai trò", render: (r) => r.role || "—" },
           {
             key: "isActive",
             label: "Trạng thái",

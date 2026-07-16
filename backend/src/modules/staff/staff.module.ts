@@ -4,13 +4,10 @@ import { StaffInfo } from './entities/staff-info.entity';
 import { StaffService } from './staff.service';
 import { StaffController } from './staff.controller';
 import { Account } from '../accounts/entities/account.entity';
-import { AccountRole } from '../accounts/entities/account-role.entity';
-import { AccountsModule } from '../accounts/accounts.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([StaffInfo, Account, AccountRole]),
-    AccountsModule,
+    TypeOrmModule.forFeature([StaffInfo, Account]),
   ],
   controllers: [StaffController],
   providers: [StaffService],

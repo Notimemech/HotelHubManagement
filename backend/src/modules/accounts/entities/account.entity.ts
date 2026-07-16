@@ -3,9 +3,8 @@ import {
   Column,
   PrimaryGeneratedColumn,
   CreateDateColumn,
-  OneToMany,
+  OneToOne,
 } from 'typeorm';
-import { AccountRole } from './account-role.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { StaffInfo } from '../../staff/entities/staff-info.entity';
 
@@ -26,12 +25,12 @@ export class Account {
   @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
   createdAt!: Date;
 
-  @OneToMany(() => AccountRole, (accountRole) => accountRole.account)
-  accountRoles: AccountRole[];
+  @Column({ name: 'Role', type: 'nvarchar', length: 50, default: 'User' })
+  role!: string;
 
-  @OneToMany(() => Customer, (customer) => customer.account)
+  @OneToOne(() => Customer, (customer) => customer.account)
   customer?: Customer;
 
-  @OneToMany(() => StaffInfo, (staff) => staff.account)
+  @OneToOne(() => StaffInfo, (staff) => staff.account)
   staff?: StaffInfo;
 }

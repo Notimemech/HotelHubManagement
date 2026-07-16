@@ -1,4 +1,7 @@
-export const ROLES = ['Manager', 'Receptionist', 'Saler', 'Cleaner', 'Maintainer', 'User'];
+import { ROLES } from '../modules/accounts/roles.constants';
+
+// Re-export for compatibility with old seed.ts imports.
+export { ROLES };
 
 export const STAFF_ACCOUNTS = [
   {

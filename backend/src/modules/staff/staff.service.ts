@@ -2,15 +2,13 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { StaffInfo } from './entities/staff-info.entity';
 import { Account } from '../accounts/entities/account.entity';
-import { AccountRole } from '../accounts/entities/account-role.entity';
-import { AccountsService } from '../accounts/accounts.service';
+import { isValidRole } from '../accounts/roles.constants';
 import { RegisterStaffDto } from './dto/register-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 
@@ -21,13 +19,13 @@ export class StaffService {
     private readonly staffRepo: Repository<StaffInfo>,
     @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
-    @InjectRepository(AccountRole)
-    private readonly accountRoleRepo: Repository<AccountRole>,
-    private readonly accountsService: AccountsService,
     private readonly dataSource: DataSource,
   ) {}
 
   async createStaff(dto: RegisterStaffDto): Promise<StaffInfo> {
+    if (!isValidRole(dto.role)) {
+      throw new ConflictException(`Role ${dto.role} not allowed`);
+    }
     const existing = await this.accountRepo.findOne({
       where: { username: dto.username },
     });
@@ -40,6 +38,7 @@ export class StaffService {
           username: dto.username,
           password: hash,
           isActive: true,
+          role: dto.role,
         }),
       );
       const staff = await manager.save(
@@ -52,42 +51,37 @@ export class StaffService {
           birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
         }),
       );
-      await this.accountsService.setRole(account.accountId, dto.role);
       return staff;
     });
   }
 
   async findAll(): Promise<any[]> {
     const staffList = await this.staffRepo.find({
-      relations: { account: { accountRoles: { role: true } } },
+      relations: { account: true },
     });
 
-    return staffList.map((s) => {
-      const roles = s.account?.accountRoles?.map((ar) => ar.role?.roleName) ?? [];
-      return {
-        staffId: s.staffId,
-        accountId: s.accountId,
-        cccd: s.cccd,
-        fullName: s.fullName,
-        phone: s.phone,
-        address: s.address,
-        birthDate: s.birthDate,
-        username: s.account?.username,
-        isActive: s.account?.isActive,
-        createdAt: s.account?.createdAt,
-        roles,
-      };
-    });
+    return staffList.map((s) => ({
+      staffId: s.staffId,
+      accountId: s.accountId,
+      cccd: s.cccd,
+      fullName: s.fullName,
+      phone: s.phone,
+      address: s.address,
+      birthDate: s.birthDate,
+      username: s.account?.username,
+      isActive: s.account?.isActive,
+      createdAt: s.account?.createdAt,
+      role: s.account?.role ?? 'User',
+    }));
   }
 
   async findOne(id: string): Promise<any> {
     const s = await this.staffRepo.findOne({
       where: { staffId: id },
-      relations: { account: { accountRoles: { role: true } } },
+      relations: { account: true },
     });
     if (!s) throw new NotFoundException('Staff not found');
 
-    const roles = s.account?.accountRoles?.map((ar) => ar.role?.roleName) ?? [];
     return {
       staffId: s.staffId,
       accountId: s.accountId,
@@ -99,7 +93,7 @@ export class StaffService {
       username: s.account?.username,
       isActive: s.account?.isActive,
       createdAt: s.account?.createdAt,
-      roles,
+      role: s.account?.role ?? 'User',
     };
   }
 
@@ -136,15 +130,14 @@ export class StaffService {
   }
 
   async changeRole(id: string, roleName: string): Promise<void> {
+    if (!isValidRole(roleName)) {
+      throw new NotFoundException(`Role ${roleName} not found`);
+    }
     const staff = await this.staffRepo.findOne({ where: { staffId: id } });
     if (!staff) throw new NotFoundException('Staff not found');
 
     await this.dataSource.transaction(async (manager) => {
-      const arRepo = manager.getRepository(AccountRole);
-      // Delete old roles
-      await arRepo.delete({ accountId: staff.accountId });
-      // Add new role
-      await this.accountsService.setRole(staff.accountId, roleName);
+      await manager.update(Account, { accountId: staff.accountId }, { role: roleName });
     });
   }
 }

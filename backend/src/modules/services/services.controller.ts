@@ -47,7 +47,8 @@ export class ServicesController {
     return this.servicesService.remove(id);
   }
 
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('User', 'Manager', 'Receptionist')
   @Post('request')
   requestService(@Request() req, @Body() dto: RequestServiceDto) {
     return this.servicesService.requestService(req.user.sub, dto);

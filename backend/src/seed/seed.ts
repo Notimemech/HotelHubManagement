@@ -7,8 +7,6 @@ import * as bcrypt from 'bcrypt';
 import { AppModule } from '../app.module';
 
 import { Account } from '../modules/accounts/entities/account.entity';
-import { Role } from '../modules/accounts/entities/role.entity';
-import { AccountRole } from '../modules/accounts/entities/account-role.entity';
 import { StaffInfo } from '../modules/staff/entities/staff-info.entity';
 import { Customer } from '../modules/customers/entities/customer.entity';
 import { RoomType } from '../modules/rooms/entities/room-type.entity';
@@ -17,7 +15,6 @@ import { Service } from '../modules/services/entities/service.entity';
 import { ChecklistTemplate } from '../modules/housekeeping/entities/checklist-template.entity';
 
 import {
-  ROLES,
   STAFF_ACCOUNTS,
   CUSTOMER_ACCOUNTS,
 } from './roles.seed';
@@ -38,9 +35,7 @@ async function bootstrap() {
 
   try {
     await dataSource.transaction(async (manager) => {
-      const roleRepo = manager.getRepository(Role);
       const accountRepo = manager.getRepository(Account);
-      const accountRoleRepo = manager.getRepository(AccountRole);
       const staffRepo = manager.getRepository(StaffInfo);
       const customerRepo = manager.getRepository(Customer);
       const roomTypeRepo = manager.getRepository(RoomType);
@@ -48,13 +43,7 @@ async function bootstrap() {
       const serviceRepo = manager.getRepository(Service);
       const checklistTemplateRepo = manager.getRepository(ChecklistTemplate);
 
-      // 1. Roles
-      for (const roleName of ROLES) {
-        const existing = await roleRepo.findOne({ where: { roleName } });
-        if (!existing) await roleRepo.save(roleRepo.create({ roleName }));
-      }
-
-      // 2. Accounts (staff + customer) + bcrypt
+      // 1. Accounts (staff + customer) + bcrypt
       const hash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
       const accounts: Record<string, Account> = {};
       const allAccounts = [...STAFF_ACCOUNTS, ...CUSTOMER_ACCOUNTS];
@@ -63,6 +52,9 @@ async function bootstrap() {
           where: { username: acc.username },
         });
         if (existing) {
+          // ponytail: keep existing Account.Role untouched on re-seed to avoid
+          // overwriting Manager role that an admin may have changed.
+          // Upgrade path: pass --reset to clobber via seed:reset.
           accounts[acc.username] = existing;
           continue;
         }
@@ -71,31 +63,13 @@ async function bootstrap() {
             username: acc.username,
             password: hash,
             isActive: true,
+            role: acc.role,
           }),
         );
         accounts[acc.username] = created;
       }
 
-      // 3. AccountRoles (inline setRole using transaction repo, see accounts.service.ts:43)
-      for (const acc of allAccounts) {
-        const role = await roleRepo.findOne({ where: { roleName: acc.role } });
-        if (!role) throw new Error(`Role ${acc.role} missing`);
-        const exists = await accountRoleRepo.findOne({
-          where: {
-            accountId: accounts[acc.username].accountId,
-            roleId: role.roleId,
-          },
-        });
-        if (exists) continue;
-        await accountRoleRepo.save(
-          accountRoleRepo.create({
-            accountId: accounts[acc.username].accountId,
-            roleId: role.roleId,
-          }),
-        );
-      }
-
-      // 4. StaffInfo
+      // 2. StaffInfo
       for (const s of STAFF_ACCOUNTS) {
         const account = accounts[s.username];
         const exists = await staffRepo.findOne({ where: { cccd: s.cccd } });
@@ -111,7 +85,7 @@ async function bootstrap() {
         );
       }
 
-      // 5. Customers
+      // 3. Customers
       for (const c of CUSTOMER_ACCOUNTS) {
         const account = accounts[c.username];
         const exists = await customerRepo.findOne({
@@ -128,7 +102,7 @@ async function bootstrap() {
         );
       }
 
-      // 6. RoomTypes
+      // 4. RoomTypes
       const roomTypes: Record<string, RoomType> = {};
       for (const rt of ROOM_TYPES) {
         const existing = await roomTypeRepo.findOne({
@@ -142,7 +116,7 @@ async function bootstrap() {
         roomTypes[rt.typeName] = created;
       }
 
-      // 7. Rooms
+      // 5. Rooms
       for (const r of ROOMS) {
         const existing = await roomRepo.findOne({
           where: { roomCode: r.roomCode },
@@ -158,7 +132,7 @@ async function bootstrap() {
         );
       }
 
-      // 8. Services
+      // 6. Services
       for (const s of SERVICES) {
         const existing = await serviceRepo.findOne({
           where: { serviceName: s.serviceName },
@@ -167,7 +141,7 @@ async function bootstrap() {
         await serviceRepo.save(serviceRepo.create(s));
       }
 
-      // 9. ChecklistTemplates
+      // 7. ChecklistTemplates
       for (const t of CHECKLIST_TEMPLATES) {
         const existing = await checklistTemplateRepo.findOne({
           where: { templateType: t.templateType, itemName: t.itemName },
@@ -179,7 +153,6 @@ async function bootstrap() {
 
     // Báo cáo số dòng cuối cùng (sau khi transaction commit)
     const counts = {
-      Roles: await dataSource.getRepository(Role).count(),
       Accounts: await dataSource.getRepository(Account).count(),
       StaffInfo: await dataSource.getRepository(StaffInfo).count(),
       Customers: await dataSource.getRepository(Customer).count(),
