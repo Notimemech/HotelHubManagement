@@ -9,33 +9,33 @@ import {
 export class RegisterStaffDto {
   @IsString()
   @IsNotEmpty()
-  Username: string;
+  username!: string;
 
   @IsString()
   @MinLength(6)
-  Password: string;
+  password!: string;
 
   @IsString()
   @IsNotEmpty()
-  FullName: string;
+  fullName!: string;
 
   @IsString()
   @IsNotEmpty()
-  CCCD: string;
+  cccd!: string;
 
   @IsOptional()
   @IsString()
-  Phone?: string;
+  phone?: string;
 
   @IsOptional()
   @IsString()
-  Address?: string;
+  address?: string;
 
   @IsOptional()
   @IsDateString()
-  BirthDate?: string;
+  birthDate?: string;
 
   @IsString()
   @IsNotEmpty()
-  Role: string;
+  role!: string;
 }

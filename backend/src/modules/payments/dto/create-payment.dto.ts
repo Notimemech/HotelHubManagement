@@ -1,13 +1,21 @@
-import { IsEnum, IsInt, IsNotEmpty, IsNumber } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class CreatePaymentDto {
-  @IsInt()
-  BookingId: number;
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  bookingId!: string;
 
   @IsNumber()
-  Amount: number;
+  amount!: number;
 
   @IsNotEmpty()
   @IsEnum(['Cash', 'Visa', 'Momo', 'VNPay'])
-  Method: string;
+  method!: string;
 }

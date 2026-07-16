@@ -29,45 +29,45 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const existing = await this.accountRepo.findOne({
-      where: { Username: dto.Username },
+      where: { username: dto.username },
     });
     if (existing) throw new ConflictException('Username already taken');
 
-    const hash = await bcrypt.hash(dto.Password, 10);
-    const account = await this.accountsService.create(dto.Username, hash);
-    await this.accountsService.setRole(account.AccountId, 'User');
+    const hash = await bcrypt.hash(dto.password, 10);
+    const account = await this.accountsService.create(dto.username, hash);
+    await this.accountsService.setRole(account.accountId, 'User');
 
     const customer = await this.customerRepo.save(
       this.customerRepo.create({
-        AccountId: account.AccountId,
-        FullName: dto.FullName,
-        Email: dto.Email,
-        Phone: dto.Phone,
+        accountId: account.accountId,
+        fullName: dto.fullName,
+        email: dto.email,
+        phone: dto.phone,
       }),
     );
 
     return {
       message: 'Registered successfully',
-      CustomerId: customer.CustomerId,
+      customerId: customer.customerId,
     };
   }
 
   async login(dto: LoginDto) {
     const account = await this.accountRepo.findOne({
-      where: { Username: dto.Username },
+      where: { username: dto.username },
     });
-    if (!account || !account.IsActive)
+    if (!account || !account.isActive)
       throw new UnauthorizedException('Invalid credentials');
 
-    const isMatch = await bcrypt.compare(dto.Password, account.Password);
+    const isMatch = await bcrypt.compare(dto.password, account.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const roles = await this.accountsService.getRoles(account.AccountId);
-    const role = roles[0]?.RoleName ?? 'User';
+    const roles = await this.accountsService.getRoles(account.accountId);
+    const role = roles[0]?.roleName ?? 'User';
 
     const payload = {
-      sub: account.AccountId,
-      username: account.Username,
+      sub: account.accountId,
+      username: account.username,
       role,
     };
     return { access_token: await this.jwtService.signAsync(payload) };
@@ -77,16 +77,16 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  async changePassword(accountId: number, dto: ChangePasswordDto) {
+  async changePassword(accountId: string, dto: ChangePasswordDto) {
     const account = await this.accountRepo.findOne({
-      where: { AccountId: accountId },
+      where: { accountId: accountId },
     });
     if (!account) throw new BadRequestException('Account not found');
 
-    const isMatch = await bcrypt.compare(dto.OldPassword, account.Password);
+    const isMatch = await bcrypt.compare(dto.oldPassword, account.password);
     if (!isMatch) throw new UnauthorizedException('Old password incorrect');
 
-    account.Password = await bcrypt.hash(dto.NewPassword, 10);
+    account.password = await bcrypt.hash(dto.newPassword, 10);
     await this.accountRepo.save(account);
     return { message: 'Password changed successfully' };
   }

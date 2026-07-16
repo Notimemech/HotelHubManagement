@@ -1,13 +1,16 @@
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class ReportIssueDto {
-  @IsInt()
-  RoomID: number;
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  roomId!: string;
 
   @IsString()
-  Description: string;
+  @IsNotEmpty()
+  description!: string;
 
   @IsOptional()
   @IsString()
-  IssueImage?: string;
+  issueImage?: string;
 }

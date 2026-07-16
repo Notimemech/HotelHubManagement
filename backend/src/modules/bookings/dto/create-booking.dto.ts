@@ -5,25 +5,27 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateBookingDto {
   @IsDateString()
-  CheckIn: string;
+  checkIn!: string;
 
   @IsDateString()
-  CheckOut: string;
+  checkOut!: string;
 
   @IsInt()
-  Adults: number;
+  adults!: number;
 
   @IsInt()
-  Children: number;
+  children!: number;
 
   @IsArray()
-  RoomIds: number[];
+  @IsUUID(4, { each: true })
+  roomIds!: string[];
 
   @IsOptional()
   @IsString()
-  SpecialRequest?: string;
+  specialRequest?: string;
 }

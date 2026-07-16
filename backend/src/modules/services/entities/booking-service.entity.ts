@@ -10,17 +10,17 @@ import { Service } from './service.entity';
 
 @Entity('BookingServices')
 export class BookingService {
-  @PrimaryGeneratedColumn()
-  BookingServiceId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'BookingServiceId' })
+  bookingServiceId!: string;
 
-  @Column({ type: 'int' })
-  BookingId: number;
+  @Column({ name: 'BookingId', type: 'uniqueidentifier' })
+  bookingId!: string;
 
-  @Column({ type: 'int' })
-  ServiceId: number;
+  @Column({ name: 'ServiceId', type: 'uniqueidentifier' })
+  serviceId!: string;
 
-  @Column({ type: 'int' })
-  Quantity: number;
+  @Column({ name: 'Quantity', type: 'int' })
+  quantity!: number;
 
   @ManyToOne(() => Booking, (booking) => booking.services)
   @JoinColumn({ name: 'BookingId' })

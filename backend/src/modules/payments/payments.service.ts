@@ -17,57 +17,57 @@ export class PaymentsService {
     @InjectRepository(Customer) private customerRepo: Repository<Customer>,
   ) {}
 
-  private async resolveCustomerId(accountId: number): Promise<number> {
+  private async resolveCustomerId(accountId: string): Promise<string> {
     const c = await this.customerRepo.findOne({
-      where: { AccountId: accountId },
+      where: { accountId: accountId },
     });
     if (!c)
       throw new NotFoundException(
         'Customer profile not found for this account',
       );
-    return c.CustomerId;
+    return c.customerId;
   }
 
-  async create(accountId: number, dto: CreatePaymentDto) {
+  async create(accountId: string, dto: CreatePaymentDto) {
     const customerId = await this.resolveCustomerId(accountId);
 
     const booking = await this.bookingRepo.findOne({
-      where: { BookingId: dto.BookingId, CustomerId: customerId },
+      where: { bookingId: dto.bookingId, customerId: customerId },
     });
     if (!booking) throw new NotFoundException('Booking not found');
 
     const version = await this.versionRepo.findOne({
       where: {
-        BookingId: dto.BookingId,
-        VersionNumber: booking.CurrentVersion,
+        bookingId: dto.bookingId,
+        versionNumber: booking.currentVersion,
       },
     });
     if (!version) throw new NotFoundException('Booking version not found');
 
     const payment = this.paymentRepo.create({
-      VersionId: version.VersionId,
-      BookingId: booking.BookingId,
-      Amount: dto.Amount,
-      Method: dto.Method,
-      Status: 'Paid',
-      PaidAt: new Date(),
+      versionId: version.versionId,
+      bookingId: booking.bookingId,
+      amount: dto.amount,
+      method: dto.method,
+      status: 'Paid',
+      paidAt: new Date(),
     });
     const savedPayment = await this.paymentRepo.save(payment);
 
-    if (booking.Status === 'Pending') {
-      booking.Status = 'Confirmed';
+    if (booking.status === 'Pending') {
+      booking.status = 'Confirmed';
       await this.bookingRepo.save(booking);
     }
 
-    return { message: 'Payment successful', PaymentId: savedPayment.PaymentId };
+    return { message: 'Payment successful', paymentId: savedPayment.paymentId };
   }
 
-  async getHistory(accountId: number) {
+  async getHistory(accountId: string) {
     const customerId = await this.resolveCustomerId(accountId);
     return this.paymentRepo.find({
-      where: { booking: { CustomerId: customerId } },
+      where: { booking: { customerId: customerId } },
       relations: { booking: true, version: true },
-      order: { PaidAt: 'DESC' },
+      order: { paidAt: 'DESC' },
     });
   }
 }

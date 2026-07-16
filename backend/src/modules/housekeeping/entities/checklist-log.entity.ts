@@ -12,36 +12,36 @@ import { ChecklistTemplate } from './checklist-template.entity';
 
 @Entity('ChecklistLogs')
 export class ChecklistLog {
-  @PrimaryGeneratedColumn()
-  LogId: number;
+  @PrimaryGeneratedColumn('uuid')
+  logId!: string;
 
-  @Column({ type: 'int' })
-  RoomID: number;
+  @Column({ name: 'RoomID', type: 'uniqueidentifier' })
+  roomId!: string;
 
-  @Column({ type: 'int' })
-  StaffId: number;
+  @Column({ name: 'StaffId', type: 'uniqueidentifier' })
+  staffId!: string;
 
-  @Column({ type: 'nvarchar', length: 50, nullable: true })
-  TemplateType: string;
+  @Column({ name: 'TemplateType', type: 'nvarchar', length: 50, nullable: true })
+  templateType!: string;
 
-  @CreateDateColumn({ type: 'datetime' })
-  LogTime: Date;
+  @CreateDateColumn({ name: 'LogTime', type: 'datetime' })
+  logTime!: Date;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  EvidenceImage: string;
+  @Column({ name: 'EvidenceImage', type: 'nvarchar', length: 'MAX', nullable: true })
+  evidenceImage!: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  Notes: string;
+  @Column({ name: 'Notes', type: 'nvarchar', length: 'MAX', nullable: true })
+  notes!: string;
 
   @ManyToOne(() => Room, (room) => room.checklistLogs)
   @JoinColumn({ name: 'RoomID' })
-  room: Room;
+  room?: Room;
 
   @ManyToOne(() => StaffInfo, (staff) => staff.checklistLogs)
   @JoinColumn({ name: 'StaffId' })
-  staff: StaffInfo;
+  staff?: StaffInfo;
 
   @ManyToOne(() => ChecklistTemplate, (tpl) => tpl.logs)
-  @JoinColumn({ name: 'TemplateType', referencedColumnName: 'TemplateType' })
-  template: ChecklistTemplate;
+  @JoinColumn({ name: 'TemplateType', referencedColumnName: 'templateType' })
+  template?: ChecklistTemplate;
 }

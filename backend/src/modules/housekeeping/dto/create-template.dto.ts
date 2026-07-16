@@ -3,13 +3,13 @@ import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 export class CreateTemplateDto {
   @IsString()
   @IsNotEmpty()
-  TemplateType: string;
+  templateType!: string;
 
   @IsString()
   @IsNotEmpty()
-  ItemName: string;
+  itemName!: string;
 
   @IsOptional()
   @IsString()
-  Description?: string;
+  description?: string;
 }

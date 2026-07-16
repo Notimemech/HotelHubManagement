@@ -23,7 +23,7 @@ let AppController = class AppController {
             address: '123 Main St, City, Country',
             phone: '+1 234 567 8900',
             email: 'contact@hotelhub.com',
-            description: 'The best hotel to stay.'
+            description: 'The best hotel to stay.',
         };
     }
 };

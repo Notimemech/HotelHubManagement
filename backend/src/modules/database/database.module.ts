@@ -11,7 +11,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       password: process.env.DB_PASSWORD || '1403',
       database: process.env.DB_NAME || 'HotelHubManagement',
       autoLoadEntities: true,
-      synchronize: false,
+      synchronize: true,
     }),
   ],
   exports: [TypeOrmModule],

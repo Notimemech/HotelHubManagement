@@ -7,7 +7,6 @@ import {
   Param,
   UseGuards,
   Request,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -29,26 +28,26 @@ export class BookingsController {
   }
 
   @Get(':id')
-  findOne(@Request() req, @Param('id', ParseIntPipe) id: number) {
+  findOne(@Request() req, @Param('id') id: string) {
     return this.bookingsService.findOne(req.user.sub, id);
   }
 
   @Get(':id/versions')
-  listVersions(@Request() req, @Param('id', ParseIntPipe) id: number) {
+  listVersions(@Request() req, @Param('id') id: string) {
     return this.bookingsService.listVersions(req.user.sub, id);
   }
 
   @Put(':id')
   update(
     @Request() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateData: any,
   ) {
     return this.bookingsService.update(req.user.sub, id, updateData);
   }
 
   @Post(':id/cancel')
-  cancel(@Request() req, @Param('id', ParseIntPipe) id: number) {
+  cancel(@Request() req, @Param('id') id: string) {
     return this.bookingsService.cancel(req.user.sub, id);
   }
 }

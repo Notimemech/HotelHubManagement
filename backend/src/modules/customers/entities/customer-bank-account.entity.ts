@@ -9,25 +9,35 @@ import { Customer } from './customer.entity';
 
 @Entity('CustomerBankAccounts')
 export class CustomerBankAccount {
-  @PrimaryGeneratedColumn()
-  BankId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'BankId' })
+  bankId!: string;
 
-  @Column({ type: 'int' })
-  CustomerId: number;
+  @Column({ name: 'CustomerId', type: 'uniqueidentifier' })
+  customerId!: string;
 
-  @Column({ type: 'nvarchar', length: 100, nullable: true })
-  BankName: string;
+  @Column({ name: 'BankName', type: 'nvarchar', length: 100, nullable: true })
+  bankName!: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  AccountNumber: string;
+  @Column({
+    name: 'AccountNumber',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  accountNumber!: string;
 
-  @Column({ type: 'nvarchar', length: 100, nullable: true })
-  AccountHolderName: string;
+  @Column({
+    name: 'AccountHolderName',
+    type: 'nvarchar',
+    length: 100,
+    nullable: true,
+  })
+  accountHolderName!: string;
 
-  @Column({ type: 'bit', default: 0 })
-  IsDefault: boolean;
+  @Column({ name: 'IsDefault', type: 'bit', default: 0 })
+  isDefault!: boolean;
 
   @ManyToOne(() => Customer, (customer) => customer.bankAccounts)
   @JoinColumn({ name: 'CustomerId' })
-  customer: Customer;
+  customer!: Customer;
 }

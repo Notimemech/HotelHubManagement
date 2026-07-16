@@ -4,25 +4,27 @@ import {
   IsOptional,
   IsString,
   Matches,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateRoomDto {
-  @IsNotEmpty({ message: 'RoomCode is required' })
-  @IsString({ message: 'RoomCode must be a string' })
-  RoomCode: string;
+  @IsNotEmpty({ message: 'roomCode is required' })
+  @IsString({ message: 'roomCode must be a string' })
+  roomCode!: string;
 
-  @IsNotEmpty({ message: 'TypeID is required' })
-  @IsInt({ message: 'TypeID must be an integer' })
-  TypeID: number;
+  @IsNotEmpty({ message: 'typeId is required' })
+  @IsString({ message: 'typeId must be a string' })
+  @IsUUID()
+  typeId!: string;
 
   @IsOptional()
-  @IsInt({ message: 'Floor must be an integer' })
-  Floor?: number;
+  @IsInt({ message: 'floor must be an integer' })
+  floor?: number;
 
-  @IsNotEmpty({ message: 'Status is required' })
-  @IsString({ message: 'Status must be a string' })
+  @IsNotEmpty({ message: 'status is required' })
+  @IsString({ message: 'status must be a string' })
   @Matches(/^(Available|Occupied|Maintenance)$/i, {
-    message: 'Status must be one of: Available, Occupied, Maintenance',
+    message: 'status must be one of: Available, Occupied, Maintenance',
   })
-  Status: string;
+  status!: string;
 }

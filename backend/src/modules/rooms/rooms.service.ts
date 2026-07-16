@@ -19,9 +19,9 @@ export class RoomsService {
     return this.roomRepo.find({ relations: { roomType: true } });
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const room = await this.roomRepo.findOne({
-      where: { RoomId: id },
+      where: { roomId: id },
       relations: { roomType: true },
     });
     if (!room) throw new NotFoundException('Room not found');
@@ -29,19 +29,19 @@ export class RoomsService {
   }
 
   async create(dto: Partial<Room>) {
-    if (!dto.RoomCode) {
-      throw new BadRequestException('RoomCode is required');
+    if (!dto.roomCode) {
+      throw new BadRequestException('roomCode is required');
     }
 
     const existingRoom = await this.roomRepo.findOne({
-      where: { RoomCode: dto.RoomCode },
+      where: { roomCode: dto.roomCode },
     });
     if (existingRoom) {
       throw new BadRequestException('Room code already exists');
     }
 
     const roomType = await this.roomTypeRepo.findOne({
-      where: { TypeID: dto.TypeID },
+      where: { typeId: dto.typeId },
     });
     if (!roomType) {
       throw new NotFoundException('Room type not found');
@@ -51,24 +51,24 @@ export class RoomsService {
     return this.roomRepo.save(room);
   }
 
-  async update(id: number, dto: Partial<Room>) {
-    const room = await this.roomRepo.findOne({ where: { RoomId: id } });
+  async update(id: string, dto: Partial<Room>) {
+    const room = await this.roomRepo.findOne({ where: { roomId: id } });
     if (!room) {
       throw new NotFoundException('Room not found');
     }
 
-    if (dto.RoomCode) {
+    if (dto.roomCode) {
       const existingRoom = await this.roomRepo.findOne({
-        where: { RoomCode: dto.RoomCode },
+        where: { roomCode: dto.roomCode },
       });
-      if (existingRoom && existingRoom.RoomId !== id) {
+      if (existingRoom && existingRoom.roomId !== id) {
         throw new BadRequestException('Room code already exists');
       }
     }
 
-    if (dto.TypeID) {
+    if (dto.typeId) {
       const roomType = await this.roomTypeRepo.findOne({
-        where: { TypeID: dto.TypeID },
+        where: { typeId: dto.typeId },
       });
       if (!roomType) {
         throw new NotFoundException('Room type not found');
@@ -79,8 +79,8 @@ export class RoomsService {
     return this.roomRepo.save(room);
   }
 
-  async remove(id: number) {
-    const room = await this.roomRepo.findOne({ where: { RoomId: id } });
+  async remove(id: string) {
+    const room = await this.roomRepo.findOne({ where: { roomId: id } });
     if (!room) {
       throw new NotFoundException('Room not found');
     }

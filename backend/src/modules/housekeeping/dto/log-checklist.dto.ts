@@ -1,18 +1,20 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class LogChecklistDto {
-  @IsInt()
-  RoomID: number;
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  roomId!: string;
 
   @IsString()
   @IsNotEmpty()
-  TemplateType: string;
+  templateType!: string;
 
   @IsOptional()
   @IsString()
-  EvidenceImage?: string;
+  evidenceImage?: string;
 
   @IsOptional()
   @IsString()
-  Notes?: string;
+  notes?: string;
 }

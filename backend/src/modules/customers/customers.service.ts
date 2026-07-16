@@ -14,39 +14,39 @@ export class CustomersService {
     private readonly bankRepo: Repository<CustomerBankAccount>,
   ) {}
 
-  private async findCustomerByAccountId(accountId: number): Promise<Customer> {
+  private async findCustomerByAccountId(accountId: string): Promise<Customer> {
     const customer = await this.customerRepo.findOne({
-      where: { AccountId: accountId },
+      where: { accountId: accountId },
     });
     if (!customer) throw new NotFoundException('Customer not found');
     return customer;
   }
 
-  async getProfile(accountId: number) {
+  async getProfile(accountId: string) {
     const customer = await this.findCustomerByAccountId(accountId);
     return customer;
   }
 
-  async updateProfile(accountId: number, dto: UpdateProfileDto) {
+  async updateProfile(accountId: string, dto: UpdateProfileDto) {
     const customer = await this.findCustomerByAccountId(accountId);
-    if (dto.FullName) customer.FullName = dto.FullName;
-    if (dto.Avatar) customer.Avatar = dto.Avatar;
+    if (dto.fullName) customer.fullName = dto.fullName;
+    if (dto.avatar) customer.avatar = dto.avatar;
     return this.customerRepo.save(customer);
   }
 
-  listBankAccounts(accountId: number): Promise<CustomerBankAccount[]> {
+  listBankAccounts(accountId: string): Promise<CustomerBankAccount[]> {
     return this.findCustomerByAccountId(accountId).then((c) =>
-      this.bankRepo.find({ where: { CustomerId: c.CustomerId } }),
+      this.bankRepo.find({ where: { customerId: c.customerId } }),
     );
   }
 
   addBankAccount(
-    accountId: number,
-    dto: Omit<CustomerBankAccount, 'BankId' | 'CustomerId'>,
+    accountId: string,
+    dto: Omit<CustomerBankAccount, 'bankId' | 'customerId'>,
   ): Promise<CustomerBankAccount> {
     return this.findCustomerByAccountId(accountId).then((c) =>
       this.bankRepo.save(
-        this.bankRepo.create({ ...dto, CustomerId: c.CustomerId }),
+        this.bankRepo.create({ ...dto, customerId: c.customerId }),
       ),
     );
   }

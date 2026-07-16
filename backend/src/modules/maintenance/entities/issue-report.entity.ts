@@ -13,26 +13,26 @@ import { MaintenanceProve } from './maintenance-prove.entity';
 
 @Entity('IssueReports')
 export class IssueReport {
-  @PrimaryGeneratedColumn()
-  IssueId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'IssueId' })
+  issueId!: string;
 
-  @Column({ type: 'int' })
-  RoomID: number;
+  @Column({ name: 'RoomID', type: 'uniqueidentifier' })
+  roomId!: string;
 
-  @Column({ type: 'int' })
-  ReporterId: number;
+  @Column({ name: 'ReporterId', type: 'uniqueidentifier' })
+  reporterId!: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  Description: string;
+  @Column({ name: 'Description', type: 'nvarchar', length: 'MAX', nullable: true })
+  description!: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  IssueImage: string;
+  @Column({ name: 'IssueImage', type: 'nvarchar', length: 'MAX', nullable: true })
+  issueImage!: string;
 
-  @Column({ type: 'nvarchar', length: 50, default: 'Pending' })
-  Status: string;
+  @Column({ name: 'Status', type: 'nvarchar', length: 50, default: 'Pending' })
+  status!: string;
 
-  @CreateDateColumn({ type: 'datetime' })
-  CreatedAt: Date;
+  @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
+  createdAt!: Date;
 
   @ManyToOne(() => Room, (room) => room.issueReports)
   @JoinColumn({ name: 'RoomID' })

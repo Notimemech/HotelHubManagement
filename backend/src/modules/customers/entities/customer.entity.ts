@@ -13,26 +13,38 @@ import { CustomerBankAccount } from './customer-bank-account.entity';
 
 @Entity('Customers')
 export class Customer {
-  @PrimaryGeneratedColumn()
-  CustomerId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'CustomerId' })
+  customerId!: string;
 
-  @Column({ type: 'int', unique: true })
-  AccountId: number;
+  @Column({ name: 'AccountId', type: 'uniqueidentifier', unique: true })
+  accountId!: string;
 
-  @Column({ type: 'nvarchar', length: 100 })
-  FullName: string;
+  @Column({ name: 'FullName', type: 'nvarchar', length: 100 })
+  fullName!: string;
 
-  @Column({ type: 'nvarchar', length: 100, unique: true, nullable: true })
-  Email: string;
+  @Column({
+    name: 'Email',
+    type: 'nvarchar',
+    length: 100,
+    unique: true,
+    nullable: true,
+  })
+  email!: string;
 
-  @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
-  Phone: string;
+  @Column({
+    name: 'Phone',
+    type: 'varchar',
+    length: 20,
+    unique: true,
+    nullable: true,
+  })
+  phone!: string;
 
-  @Column({ type: 'nvarchar', length: 255, nullable: true })
-  Avatar: string;
+  @Column({ name: 'Avatar', type: 'nvarchar', length: 255, nullable: true })
+  avatar!: string;
 
-  @CreateDateColumn({ type: 'datetime' })
-  CreatedAt: Date;
+  @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
+  createdAt!: Date;
 
   @OneToOne(() => Account, (account) => account.customer)
   @JoinColumn({ name: 'AccountId' })

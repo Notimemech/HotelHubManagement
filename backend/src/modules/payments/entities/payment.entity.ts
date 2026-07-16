@@ -10,29 +10,34 @@ import { Booking } from '../../bookings/entities/booking.entity';
 
 @Entity('Payments')
 export class Payment {
-  @PrimaryGeneratedColumn()
-  PaymentId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'PaymentId' })
+  paymentId!: string;
 
-  @Column({ type: 'int' })
-  VersionId: number;
+  @Column({ name: 'VersionId', type: 'uniqueidentifier' })
+  versionId!: string;
 
-  @Column({ type: 'int' })
-  BookingId: number;
+  @Column({ name: 'BookingId', type: 'uniqueidentifier' })
+  bookingId!: string;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2 })
-  Amount: number;
+  @Column({ name: 'Amount', type: 'decimal', precision: 18, scale: 2 })
+  amount!: number;
 
-  @Column({ type: 'varchar', length: 20 })
-  Method: string;
+  @Column({ name: 'Method', type: 'varchar', length: 20 })
+  method!: string;
 
-  @Column({ type: 'varchar', length: 20, default: 'Pending' })
-  Status: string;
+  @Column({
+    name: 'Status',
+    type: 'varchar',
+    length: 20,
+    default: 'Pending',
+  })
+  status!: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  ExternalTransactionID: string;
+  @Column({ name: 'ExternalTransactionID', type: 'varchar', length: 100, nullable: true })
+  externalTransactionId!: string;
 
-  @Column({ type: 'datetime', nullable: true })
-  PaidAt: Date;
+  @Column({ name: 'PaidAt', type: 'datetime', nullable: true })
+  paidAt!: Date;
 
   @ManyToOne(() => BookingVersion, (v) => v.payments)
   @JoinColumn({ name: 'VersionId' })

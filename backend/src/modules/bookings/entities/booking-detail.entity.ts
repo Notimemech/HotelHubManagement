@@ -10,20 +10,20 @@ import { Room } from '../../rooms/entities/room.entity';
 
 @Entity('BookingDetails')
 export class BookingDetail {
-  @PrimaryGeneratedColumn()
-  BookingDetailId!: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'BookingDetailId' })
+  bookingDetailId!: string;
 
-  @Column({ type: 'int' })
-  VersionId!: number;
+  @Column({ name: 'VersionId', type: 'uniqueidentifier' })
+  versionId!: string;
 
-  @Column({ type: 'int' })
-  RoomId!: number;
+  @Column({ name: 'RoomId', type: 'uniqueidentifier' })
+  roomId!: string;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2 })
-  Price!: number;
+  @Column({ name: 'Price', type: 'decimal', precision: 18, scale: 2 })
+  price!: number;
 
-  @Column({ type: 'int' })
-  Nights!: number;
+  @Column({ name: 'Nights', type: 'int' })
+  nights!: number;
 
   @ManyToOne(() => BookingVersion, (v) => v.details, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'VersionId' })

@@ -14,26 +14,26 @@ import { MaintenanceProve } from '../../maintenance/entities/maintenance-prove.e
 
 @Entity('StaffInfo')
 export class StaffInfo {
-  @PrimaryGeneratedColumn()
-  StaffId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'StaffId' })
+  staffId!: string;
 
-  @Column({ type: 'int', unique: true })
-  AccountId: number;
+  @Column({ name: 'AccountId', type: 'uniqueidentifier', unique: true })
+  accountId!: string;
 
-  @Column({ type: 'varchar', length: 20, unique: true })
-  CCCD: string;
+  @Column({ name: 'CCCD', type: 'varchar', length: 20, unique: true })
+  cccd!: string;
 
-  @Column({ type: 'nvarchar', length: 100 })
-  FullName: string;
+  @Column({ name: 'FullName', type: 'nvarchar', length: 100 })
+  fullName!: string;
 
-  @Column({ type: 'date', nullable: true })
-  BirthDate: Date;
+  @Column({ name: 'BirthDate', type: 'date', nullable: true })
+  birthDate!: Date;
 
-  @Column({ type: 'varchar', length: 15, nullable: true })
-  Phone: string;
+  @Column({ name: 'Phone', type: 'varchar', length: 15, nullable: true })
+  phone!: string;
 
-  @Column({ type: 'nvarchar', length: 255, nullable: true })
-  Address: string;
+  @Column({ name: 'Address', type: 'nvarchar', length: 255, nullable: true })
+  address!: string;
 
   @OneToOne(() => Account, (account) => account.staff)
   @JoinColumn({ name: 'AccountId' })

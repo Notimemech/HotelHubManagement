@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Request,
   UseGuards,
@@ -32,14 +31,14 @@ export class MaintenanceController {
   @Post('issues/:id/prove')
   prove(
     @Request() req,
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: ProveIssueDto,
   ) {
     return this.maintenanceService.proveIssue(req.user.sub, id, dto);
   }
 
   @Get('issues/:id/proves')
-  listProves(@Param('id', ParseIntPipe) id: number) {
+  listProves(@Param('id') id: string) {
     return this.maintenanceService.listProves(id);
   }
 }
