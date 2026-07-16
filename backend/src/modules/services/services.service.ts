@@ -23,33 +23,36 @@ export class ServicesService {
     return this.serviceRepo.find();
   }
 
-  async requestService(customerId: number, dto: RequestServiceDto) {
+  async requestService(accountId: string, dto: RequestServiceDto) {
+    // Resolve customer id from account id (JWT sub).
+    // We can't inject Customer repo here without changing ctor signature, so look up via Booking.customerId.
     const booking = await this.bookingRepo.findOne({
-      where: { BookingId: dto.BookingId, CustomerId: customerId },
+      where: { bookingId: dto.bookingId },
+      relations: { customer: true },
     });
-    if (!booking) throw new NotFoundException('Booking not found');
+    if (!booking || booking.customer?.accountId !== accountId)
+      throw new NotFoundException('Booking not found');
 
     const service = await this.serviceRepo.findOne({
-      where: { ServiceId: dto.ServiceId },
+      where: { serviceId: dto.serviceId },
     });
     if (!service) throw new NotFoundException('Service not found');
 
     const bookingService = this.bookingServiceRepo.create({
-      BookingId: dto.BookingId,
-      ServiceId: dto.ServiceId,
-      Quantity: dto.Quantity,
+      bookingId: dto.bookingId,
+      serviceId: dto.serviceId,
+      quantity: dto.quantity,
     });
 
     await this.bookingServiceRepo.save(bookingService);
 
-    // Update total price of the booking
-    booking.TotalPrice =
-      Number(booking.TotalPrice) + Number(service.Price) * dto.Quantity;
+    booking.totalPrice =
+      Number(booking.totalPrice) + Number(service.price) * dto.quantity;
     await this.bookingRepo.save(booking);
 
     return {
       message: 'Service requested successfully',
-      TotalPrice: booking.TotalPrice,
+      totalPrice: booking.totalPrice,
     };
   }
 }

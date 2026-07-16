@@ -9,21 +9,21 @@ import {
 export class RegisterDto {
   @IsNotEmpty()
   @IsString()
-  Username: string;
+  username!: string;
 
   @IsNotEmpty()
   @IsString()
-  FullName: string;
+  fullName!: string;
 
   @IsOptional()
   @IsEmail()
-  Email?: string;
+  email?: string;
 
   @IsOptional()
   @IsString()
-  Phone?: string;
+  phone?: string;
 
   @IsNotEmpty()
   @MinLength(6)
-  Password: string;
+  password!: string;
 }

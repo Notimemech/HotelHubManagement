@@ -11,23 +11,23 @@ import { StaffInfo } from '../../staff/entities/staff-info.entity';
 
 @Entity('MaintenanceProves')
 export class MaintenanceProve {
-  @PrimaryGeneratedColumn()
-  ProveId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'ProveId' })
+  proveId!: string;
 
-  @Column({ type: 'int' })
-  IssueId: number;
+  @Column({ name: 'IssueId', type: 'uniqueidentifier' })
+  issueId!: string;
 
-  @Column({ type: 'int' })
-  MaintainerId: number;
+  @Column({ name: 'MaintainerId', type: 'uniqueidentifier' })
+  maintainerId!: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  FinishImage: string;
+  @Column({ name: 'FinishImage', type: 'nvarchar', length: 'MAX', nullable: true })
+  finishImage!: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  FinishVideo: string;
+  @Column({ name: 'FinishVideo', type: 'nvarchar', length: 'MAX', nullable: true })
+  finishVideo!: string;
 
-  @CreateDateColumn({ type: 'datetime' })
-  ResolvedAt: Date;
+  @CreateDateColumn({ name: 'ResolvedAt', type: 'datetime' })
+  resolvedAt!: Date;
 
   @ManyToOne(() => IssueReport, (issue) => issue.proves)
   @JoinColumn({ name: 'IssueId' })

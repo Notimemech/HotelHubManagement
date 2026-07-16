@@ -11,20 +11,20 @@ import { StaffInfo } from '../../staff/entities/staff-info.entity';
 
 @Entity('Accounts')
 export class Account {
-  @PrimaryGeneratedColumn()
-  AccountId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'AccountId' })
+  accountId!: string;
 
-  @Column({ type: 'varchar', length: 50, unique: true })
-  Username: string;
+  @Column({ name: 'Username', type: 'varchar', length: 50, unique: true })
+  username!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  Password: string;
+  @Column({ name: 'Password', type: 'varchar', length: 255 })
+  password!: string;
 
-  @Column({ type: 'bit', default: 1 })
-  IsActive: boolean;
+  @Column({ name: 'IsActive', type: 'bit', default: 1 })
+  isActive!: boolean;
 
-  @CreateDateColumn({ type: 'datetime' })
-  CreatedAt: Date;
+  @CreateDateColumn({ name: 'CreatedAt', type: 'datetime' })
+  createdAt!: Date;
 
   @OneToMany(() => AccountRole, (accountRole) => accountRole.account)
   accountRoles: AccountRole[];

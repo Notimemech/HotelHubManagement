@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Request,
   UseGuards,
@@ -34,7 +33,7 @@ export class HousekeepingController {
   }
 
   @Get('logs/room/:roomId')
-  listByRoom(@Param('roomId', ParseIntPipe) roomId: number) {
+  listByRoom(@Param('roomId') roomId: string) {
     return this.housekeepingService.listLogsByRoom(roomId);
   }
 }

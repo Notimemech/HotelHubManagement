@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Skill(read-swagger)",
+      "Skill(read-swagger:*)",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npm run *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "codegraph"
+  ]
+}

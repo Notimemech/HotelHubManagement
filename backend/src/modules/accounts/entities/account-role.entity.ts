@@ -4,11 +4,11 @@ import { Role } from './role.entity';
 
 @Entity('AccountRoles')
 export class AccountRole {
-  @PrimaryColumn()
-  AccountId: number;
+  @PrimaryColumn({ name: 'AccountId', type: 'uuid' })
+  accountId!: string;
 
-  @PrimaryColumn()
-  RoleId: number;
+  @PrimaryColumn({ name: 'RoleId', type: 'uuid' })
+  roleId!: string;
 
   @ManyToOne(() => Account, (account) => account.accountRoles, {
     onDelete: 'CASCADE',

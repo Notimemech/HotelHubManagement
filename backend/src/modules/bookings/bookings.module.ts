@@ -7,6 +7,9 @@ import { BookingVersion } from './entities/booking-version.entity';
 import { BookingDetail } from './entities/booking-detail.entity';
 import { Room } from '../rooms/entities/room.entity';
 import { Customer } from '../customers/entities/customer.entity';
+import { AccountsModule } from '../accounts/accounts.module';
+import { StaffModule } from '../staff/staff.module';
+import { Account } from '../accounts/entities/account.entity';
 
 @Module({
   imports: [
@@ -16,7 +19,10 @@ import { Customer } from '../customers/entities/customer.entity';
       BookingDetail,
       Room,
       Customer,
+      Account,
     ]),
+    AccountsModule,
+    StaffModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

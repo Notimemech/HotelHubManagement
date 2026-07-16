@@ -3,9 +3,9 @@ import { IsOptional, IsString } from 'class-validator';
 export class ProveIssueDto {
   @IsOptional()
   @IsString()
-  FinishImage?: string;
+  finishImage?: string;
 
   @IsOptional()
   @IsString()
-  FinishVideo?: string;
+  finishVideo?: string;
 }

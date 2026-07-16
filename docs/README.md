@@ -9,6 +9,8 @@ TypeORM entities in `backend/src/modules/**/entities/`.
 docs/
 ├── README.md
 ├── schema.sql                  ← deployed PostgreSQL schema (single source of truth)
+├── business-redesign.md        ← redesigned business workflows for 5 roles
+├── booking-state-machine.md    ← Booking state machine (Pending → Completed)
 ├── domain/
 │   ├── er-diagram.mmd          ← 16 tables, 9 bounded contexts
 │   ├── domain-model.mmd        ← aggregates, entities, enums, events

@@ -1,13 +1,17 @@
-import { IsInt, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsString, Min, IsUUID } from 'class-validator';
 
 export class RequestServiceDto {
-  @IsInt()
-  BookingId: number;
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  bookingId!: string;
 
-  @IsInt()
-  ServiceId: number;
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  serviceId!: string;
 
   @IsInt()
   @Min(1)
-  Quantity: number;
+  quantity!: number;
 }

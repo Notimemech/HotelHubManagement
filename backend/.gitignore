@@ -1,1 +1,46 @@
-node_modules
+node_modules/
+dist/
+coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime artifacts
+*.pid
+*.seed
+*.pid.lock
+
+# TypeScript / build cache
+*.tsbuildinfo
+.tsbuildinfo
+.cache/
+.eslintcache
+
+# Test output
+.nyc_output/
+
+# Dependency directories for alternative package managers
+bower_components/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+.env

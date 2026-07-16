@@ -14,26 +14,37 @@ import { BookingService } from '../../services/entities/booking-service.entity';
 
 @Entity('Bookings')
 export class Booking {
-  @PrimaryGeneratedColumn()
-  BookingId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'BookingId' })
+  bookingId!: string;
 
-  @Column({ type: 'int' })
-  CustomerId: number;
+  @Column({ name: 'CustomerId', type: 'uniqueidentifier' })
+  customerId!: string;
 
-  @CreateDateColumn({ type: 'datetime' })
-  BookingDate: Date;
+  @CreateDateColumn({ name: 'BookingDate', type: 'datetime' })
+  bookingDate!: Date;
 
-  @Column({ type: 'int', default: 1 })
-  CurrentVersion: number;
+  @Column({ name: 'CurrentVersion', type: 'int', default: 1 })
+  currentVersion!: number;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
-  TotalPrice: number;
+  @Column({
+    name: 'TotalPrice',
+    type: 'decimal',
+    precision: 18,
+    scale: 2,
+    default: 0,
+  })
+  totalPrice!: number;
 
-  @Column({ type: 'varchar', length: 20, default: 'Pending' })
-  Status: string;
+  @Column({
+    name: 'Status',
+    type: 'varchar',
+    length: 20,
+    default: 'Pending',
+  })
+  status!: string;
 
-  @Column({ type: 'bit', default: 0 })
-  IsDeleted: boolean;
+  @Column({ name: 'IsDeleted', type: 'bit', default: 0 })
+  isDeleted!: boolean;
 
   @ManyToOne(() => Customer, (customer) => customer.bookings)
   @JoinColumn({ name: 'CustomerId' })

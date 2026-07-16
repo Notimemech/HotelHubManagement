@@ -17,40 +17,40 @@ export class AccountsService {
 
   create(username: string, passwordHash: string): Promise<Account> {
     const acc = this.accountRepo.create({
-      Username: username,
-      Password: passwordHash,
-      IsActive: true,
+      username: username,
+      password: passwordHash,
+      isActive: true,
     });
     return this.accountRepo.save(acc);
   }
 
   findByUsername(username: string): Promise<Account | null> {
-    return this.accountRepo.findOne({ where: { Username: username } });
+    return this.accountRepo.findOne({ where: { username: username } });
   }
 
-  findById(id: number): Promise<Account | null> {
-    return this.accountRepo.findOne({ where: { AccountId: id } });
+  findById(id: string): Promise<Account | null> {
+    return this.accountRepo.findOne({ where: { accountId: id } });
   }
 
-  async getRoles(accountId: number): Promise<Role[]> {
+  async getRoles(accountId: string): Promise<Role[]> {
     const links = await this.accountRoleRepo.find({
-      where: { AccountId: accountId },
+      where: { accountId: accountId },
       relations: { role: true },
     });
     return links.map((l) => l.role);
   }
 
-  async setRole(accountId: number, roleName: string): Promise<void> {
-    const role = await this.roleRepo.findOne({ where: { RoleName: roleName } });
+  async setRole(accountId: string, roleName: string): Promise<void> {
+    const role = await this.roleRepo.findOne({ where: { roleName: roleName } });
     if (!role) throw new NotFoundException(`Role ${roleName} not found`);
     const exists = await this.accountRoleRepo.findOne({
-      where: { AccountId: accountId, RoleId: role.RoleId },
+      where: { accountId: accountId, roleId: role.roleId },
     });
     if (exists) return;
     await this.accountRoleRepo.save(
       this.accountRoleRepo.create({
-        AccountId: accountId,
-        RoleId: role.RoleId,
+        accountId: accountId,
+        roleId: role.roleId,
       }),
     );
   }

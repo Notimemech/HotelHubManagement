@@ -3,14 +3,14 @@ import { BookingService } from './booking-service.entity';
 
 @Entity('Services')
 export class Service {
-  @PrimaryGeneratedColumn()
-  ServiceId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'ServiceId' })
+  serviceId!: string;
 
-  @Column({ type: 'nvarchar', length: 100 })
-  ServiceName: string;
+  @Column({ name: 'ServiceName', type: 'nvarchar', length: 100 })
+  serviceName!: string;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2 })
-  Price: number;
+  @Column({ name: 'Price', type: 'decimal', precision: 18, scale: 2 })
+  price!: number;
 
   @OneToMany(() => BookingService, (bookingService) => bookingService.service)
   bookingServices: BookingService[];

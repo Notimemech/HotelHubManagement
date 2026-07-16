@@ -16,12 +16,12 @@ export class MaintenanceService {
     private readonly dataSource: DataSource,
   ) {}
 
-  reportIssue(reporterId: number, dto: ReportIssueDto): Promise<IssueReport> {
+  reportIssue(reporterId: string, dto: ReportIssueDto): Promise<IssueReport> {
     return this.issueRepo.save(
       this.issueRepo.create({
         ...dto,
-        ReporterId: reporterId,
-        Status: 'Pending',
+        reporterId: reporterId,
+        status: 'Pending',
       }),
     );
   }
@@ -29,35 +29,35 @@ export class MaintenanceService {
   listIssues(): Promise<IssueReport[]> {
     return this.issueRepo.find({
       relations: { room: true, reporter: true },
-      order: { CreatedAt: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
   async proveIssue(
-    maintainerId: number,
-    issueId: number,
+    maintainerId: string,
+    issueId: string,
     dto: ProveIssueDto,
   ): Promise<MaintenanceProve> {
     return this.dataSource.transaction(async (manager) => {
       const prove = await manager.save(
         manager.create(MaintenanceProve, {
           ...dto,
-          IssueId: issueId,
-          MaintainerId: maintainerId,
+          issueId: issueId,
+          maintainerId: maintainerId,
         }),
       );
       await manager.update(
         IssueReport,
-        { IssueId: issueId },
-        { Status: 'Resolved' },
+        { issueId: issueId },
+        { status: 'Resolved' },
       );
       return prove;
     });
   }
 
-  listProves(issueId: number): Promise<MaintenanceProve[]> {
+  listProves(issueId: string): Promise<MaintenanceProve[]> {
     return this.proveRepo.find({
-      where: { IssueId: issueId },
+      where: { issueId: issueId },
       relations: { maintainer: true },
     });
   }

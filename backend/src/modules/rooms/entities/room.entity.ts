@@ -13,20 +13,20 @@ import { IssueReport } from '../../maintenance/entities/issue-report.entity';
 
 @Entity('Rooms')
 export class Room {
-  @PrimaryGeneratedColumn({ name: 'RoomID' })
-  RoomId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'RoomID' })
+  roomId!: string;
 
   @Column({ name: 'RoomCode', type: 'varchar', length: 10, unique: true })
-  RoomCode: string;
+  roomCode!: string;
 
-  @Column({ name: 'TypeID', type: 'int' })
-  TypeID: number;
+  @Column({ name: 'TypeID', type: 'uniqueidentifier' })
+  typeId!: string;
 
   @Column({ name: 'Floor', type: 'int', nullable: true })
-  Floor: number;
+  floor!: number;
 
   @Column({ name: 'Status', type: 'varchar', length: 20 })
-  Status: string;
+  status!: string;
 
   @ManyToOne(() => RoomType, (roomType) => roomType.rooms)
   @JoinColumn({ name: 'TypeID' })

@@ -3,17 +3,23 @@ import { ChecklistLog } from './checklist-log.entity';
 
 @Entity('ChecklistTemplates')
 export class ChecklistTemplate {
-  @PrimaryGeneratedColumn()
-  TemplateId: number;
+  @PrimaryGeneratedColumn('uuid', { name: 'TemplateId' })
+  templateId!: string;
 
-  @Column({ type: 'nvarchar', length: 50, nullable: true })
-  TemplateType: string;
+  @Column({
+    name: 'TemplateType',
+    type: 'nvarchar',
+    length: 50,
+    nullable: true,
+    unique: true,
+  })
+  templateType!: string;
 
-  @Column({ type: 'nvarchar', length: 255 })
-  ItemName: string;
+  @Column({ name: 'ItemName', type: 'nvarchar', length: 255 })
+  itemName!: string;
 
-  @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
-  Description: string;
+  @Column({ name: 'Description', type: 'nvarchar', length: 'MAX', nullable: true })
+  description!: string;
 
   @OneToMany(() => ChecklistLog, (log) => log.template)
   logs: ChecklistLog[];

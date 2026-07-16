@@ -23,15 +23,15 @@ export class HousekeepingService {
     return this.templateRepo.find();
   }
 
-  logChecklist(staffId: number, dto: LogChecklistDto): Promise<ChecklistLog> {
-    return this.logRepo.save(this.logRepo.create({ ...dto, StaffId: staffId }));
+  logChecklist(staffId: string, dto: LogChecklistDto): Promise<ChecklistLog> {
+    return this.logRepo.save(this.logRepo.create({ ...dto, staffId: staffId }));
   }
 
-  listLogsByRoom(roomId: number): Promise<ChecklistLog[]> {
+  listLogsByRoom(roomId: string): Promise<ChecklistLog[]> {
     return this.logRepo.find({
-      where: { RoomID: roomId },
+      where: { roomId: roomId },
       relations: { staff: true, room: true },
-      order: { LogTime: 'DESC' },
+      order: { logTime: 'DESC' },
     });
   }
 }
