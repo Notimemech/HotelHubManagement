@@ -49,9 +49,9 @@ async function bootstrap() {
       const checklistTemplateRepo = manager.getRepository(ChecklistTemplate);
 
       // 1. Roles
-      for (const r of ROLES) {
-        const existing = await roleRepo.findOne({ where: { roleName: r.roleName } });
-        if (!existing) await roleRepo.save(roleRepo.create(r));
+      for (const roleName of ROLES) {
+        const existing = await roleRepo.findOne({ where: { roleName } });
+        if (!existing) await roleRepo.save(roleRepo.create({ roleName }));
       }
 
       // 2. Accounts (staff + customer) + bcrypt

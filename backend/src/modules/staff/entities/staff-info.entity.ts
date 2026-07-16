@@ -27,7 +27,7 @@ export class StaffInfo {
   fullName!: string;
 
   @Column({ name: 'BirthDate', type: 'date', nullable: true })
-  birthDate!: Date;
+  birthDate!: Date | null;
 
   @Column({ name: 'Phone', type: 'varchar', length: 15, nullable: true })
   phone!: string;

@@ -1,7 +1,7 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,6 +9,8 @@ import { Service } from './entities/service.entity';
 import { BookingService } from './entities/booking-service.entity';
 import { Booking } from '../bookings/entities/booking.entity';
 import { RequestServiceDto } from './dto/request-service.dto';
+import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
 
 @Injectable()
 export class ServicesService {
@@ -23,9 +25,33 @@ export class ServicesService {
     return this.serviceRepo.find();
   }
 
+  async create(dto: CreateServiceDto) {
+    return this.serviceRepo.save(this.serviceRepo.create(dto));
+  }
+
+  async update(id: string, dto: UpdateServiceDto) {
+    const svc = await this.serviceRepo.findOne({ where: { serviceId: id } });
+    if (!svc) throw new NotFoundException('Service not found');
+    Object.assign(svc, dto);
+    return this.serviceRepo.save(svc);
+  }
+
+  async remove(id: string) {
+    const svc = await this.serviceRepo.findOne({ where: { serviceId: id } });
+    if (!svc) throw new NotFoundException('Service not found');
+    const refCount = await this.bookingServiceRepo.count({
+      where: { serviceId: id },
+    });
+    if (refCount > 0) {
+      throw new ConflictException(
+        `Cannot delete service: ${refCount} booking reference(s) exist`,
+      );
+    }
+    await this.serviceRepo.remove(svc);
+    return { message: 'Service deleted' };
+  }
+
   async requestService(accountId: string, dto: RequestServiceDto) {
-    // Resolve customer id from account id (JWT sub).
-    // We can't inject Customer repo here without changing ctor signature, so look up via Booking.customerId.
     const booking = await this.bookingRepo.findOne({
       where: { bookingId: dto.bookingId },
       relations: { customer: true },
@@ -43,7 +69,6 @@ export class ServicesService {
       serviceId: dto.serviceId,
       quantity: dto.quantity,
     });
-
     await this.bookingServiceRepo.save(bookingService);
 
     booking.totalPrice =

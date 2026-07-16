@@ -1,21 +1,14 @@
-export const ROLES = [
-  { roleName: 'Admin', description: 'System administrator' },
-  { roleName: 'Receptionist', description: 'Front-desk / booking' },
-  { roleName: 'Staff', description: 'General hotel staff' },
-  { roleName: 'Housekeeper', description: 'Cleaning & checklist' },
-  { roleName: 'Maintenance', description: 'Maintenance & issue handling' },
-  { roleName: 'User', description: 'Default customer role' },
-];
+export const ROLES = ['Manager', 'Receptionist', 'Saler', 'Cleaner', 'Maintainer', 'User'];
 
 export const STAFF_ACCOUNTS = [
   {
     username: 'admin',
-    fullName: 'Nguyen Van Admin',
+    fullName: 'Nguyen Van Quan Ly',
     email: 'admin@hotelhub.vn',
     phone: '0900000001',
     cccd: '079000000001',
     address: '1 Ly Tu Trong, Q1, HCM',
-    role: 'Admin',
+    role: 'Manager',
   },
   {
     username: 'reception1',
@@ -33,7 +26,7 @@ export const STAFF_ACCOUNTS = [
     phone: '0900000003',
     cccd: '079000000003',
     address: '3 Ly Tu Trong, Q1, HCM',
-    role: 'Housekeeper',
+    role: 'Cleaner',
   },
   {
     username: 'maintenance1',
@@ -42,7 +35,7 @@ export const STAFF_ACCOUNTS = [
     phone: '0900000004',
     cccd: '079000000004',
     address: '4 Ly Tu Trong, Q1, HCM',
-    role: 'Maintenance',
+    role: 'Maintainer',
   },
   {
     username: 'staff1',
@@ -51,7 +44,7 @@ export const STAFF_ACCOUNTS = [
     phone: '0900000005',
     cccd: '079000000005',
     address: '5 Ly Tu Trong, Q1, HCM',
-    role: 'Staff',
+    role: 'Saler',
   },
 ];
 
