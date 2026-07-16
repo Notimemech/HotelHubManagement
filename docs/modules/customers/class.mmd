@@ -1,0 +1,39 @@
+---
+title: Customers Module - Class Diagram
+---
+classDiagram
+    class CustomersModule {
+        <<Module>>
+    }
+
+    class CustomersController {
+        <<Controller>>
+        -customersService: CustomersService
+        +getProfile(req: AuthRequest) Promise~Customer~
+        +updateProfile(req: AuthRequest, dto: UpdateCustomerDto) Promise~Customer~
+    }
+
+    class CustomersService {
+        <<Service>>
+        -customerRepo: Repository~Customer~
+        +findById(id: number) Promise~Customer~
+        +update(id: number, dto: UpdateCustomerDto) Promise~Customer~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+    }
+
+    class UpdateCustomerDto {
+        <<DTO>>
+        +fullName?: string
+        +email?: string
+        +phone?: string
+        +avatar?: string
+    }
+
+    CustomersModule --> CustomersController
+    CustomersModule --> CustomersService
+    CustomersController --> CustomersService
+    CustomersController ..> AuthGuard : protects
+    CustomersService ..> UpdateCustomerDto : consumes

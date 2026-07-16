@@ -1,0 +1,52 @@
+---
+title: Rooms Module - Class Diagram
+---
+classDiagram
+    class RoomsModule {
+        <<Module>>
+    }
+
+    class RoomsController {
+        <<Controller>>
+        -roomsService: RoomsService
+        +checkAvailability(checkIn: string, checkOut: string, guests: number) Promise~Room[]~
+        +findAll() Promise~Room[]~
+        +findOne(id: number) Promise~Room~
+        +create(dto: CreateRoomDto) Promise~Room~
+        +update(id: number, dto: UpdateRoomDto) Promise~Room~
+        +remove(id: number) Promise~void~
+    }
+
+    class RoomsService {
+        <<Service>>
+        -roomRepo: Repository~Room~
+        -roomTypeRepo: Repository~RoomType~
+        +findAll() Promise~Room[]~
+        +findOne(id: number) Promise~Room~
+        +create(dto: CreateRoomDto) Promise~Room~
+        +update(id: number, dto: UpdateRoomDto) Promise~Room~
+        +remove(id: number) Promise~void~
+        +checkAvailability(checkIn: string, checkOut: string, guests: number) Promise~Room[]~
+    }
+
+    class CreateRoomDto {
+        <<DTO>>
+        +roomCode: string
+        +typeId: number
+        +floor?: number
+        +status: string
+    }
+
+    class UpdateRoomDto {
+        <<DTO>>
+        +roomCode?: string
+        +typeId?: number
+        +floor?: number
+        +status?: string
+    }
+
+    RoomsModule --> RoomsController
+    RoomsModule --> RoomsService
+    RoomsController --> RoomsService
+    RoomsService ..> CreateRoomDto : consumes
+    RoomsService ..> UpdateRoomDto : consumes

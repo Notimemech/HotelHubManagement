@@ -1,0 +1,36 @@
+---
+title: HotelHubManagement - Container View
+---
+flowchart TB
+    subgraph Browser["Browser"]
+        FE["Next.js Frontend<br/>App Router · Tailwind"]
+    end
+
+    subgraph Backend["NestJS Process"]
+        direction TB
+        Auth["AuthModule<br/>(JWT)"]
+        Customers["CustomersModule"]
+        Rooms["RoomsModule"]
+        Bookings["BookingsModule"]
+        Payments["PaymentsModule"]
+        Services["ServicesModule"]
+        Database["DatabaseModule<br/>(TypeORM)"]
+    end
+
+    subgraph Data["Data"]
+        DB[("PostgreSQL<br/>HotelHubManagement")]
+    end
+
+    FE -- HTTPS / REST --> Auth
+    FE --> Customers
+    FE --> Rooms
+    FE --> Bookings
+    FE --> Payments
+    FE --> Services
+    Auth --> Database
+    Customers --> Database
+    Rooms --> Database
+    Bookings --> Database
+    Payments --> Database
+    Services --> Database
+    Database --> DB

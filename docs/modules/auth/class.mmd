@@ -1,0 +1,61 @@
+---
+title: Auth Module - Class Diagram
+---
+classDiagram
+    class AuthModule {
+        <<Module>>
+    }
+
+    class AuthController {
+        <<Controller>>
+        -authService: AuthService
+        +register(dto: RegisterDto) Promise~AuthResult~
+        +login(dto: LoginDto) Promise~AuthResult~
+        +logout() Promise~void~
+        +changePassword(req: AuthRequest, dto: ChangePasswordDto) Promise~void~
+    }
+
+    class AuthService {
+        <<Service>>
+        -customerRepo: Repository~Customer~
+        -jwt: JwtService
+        +register(dto: RegisterDto) Promise~AuthResult~
+        +login(dto: LoginDto) Promise~AuthResult~
+        +logout() Promise~void~
+        +changePassword(customerId: number, dto: ChangePasswordDto) Promise~void~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+        -jwt: JwtService
+        +canActivate(ctx: ExecutionContext) boolean
+    }
+
+    class RegisterDto {
+        <<DTO>>
+        +fullName: string
+        +email?: string
+        +phone: string
+        +password: string
+    }
+
+    class LoginDto {
+        <<DTO>>
+        +phone: string
+        +password: string
+    }
+
+    class ChangePasswordDto {
+        <<DTO>>
+        +oldPassword: string
+        +newPassword: string
+    }
+
+    AuthModule --> AuthController
+    AuthModule --> AuthService
+    AuthModule --> AuthGuard
+    AuthController --> AuthService
+    AuthController ..> AuthGuard : protects changePassword
+    AuthService ..> RegisterDto : consumes
+    AuthService ..> LoginDto : consumes
+    AuthService ..> ChangePasswordDto : consumes

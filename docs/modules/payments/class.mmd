@@ -1,0 +1,41 @@
+---
+title: Payments Module - Class Diagram
+---
+classDiagram
+    class PaymentsModule {
+        <<Module>>
+    }
+
+    class PaymentsController {
+        <<Controller>>
+        -paymentsService: PaymentsService
+        +create(req: AuthRequest, dto: CreatePaymentDto) Promise~Payment~
+        +findAll(req: AuthRequest) Promise~Payment[]~
+        +findOne(req: AuthRequest, id: number) Promise~Payment~
+    }
+
+    class PaymentsService {
+        <<Service>>
+        -paymentRepo: Repository~Payment~
+        -bookingRepo: Repository~Booking~
+        +create(customerId: number, dto: CreatePaymentDto) Promise~Payment~
+        +findAll(customerId: number) Promise~Payment[]~
+        +findOne(customerId: number, id: number) Promise~Payment~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+    }
+
+    class CreatePaymentDto {
+        <<DTO>>
+        +bookingId: number
+        +amount: number
+        +method: string
+    }
+
+    PaymentsModule --> PaymentsController
+    PaymentsModule --> PaymentsService
+    PaymentsController --> PaymentsService
+    PaymentsController ..> AuthGuard : protects
+    PaymentsService ..> CreatePaymentDto : consumes

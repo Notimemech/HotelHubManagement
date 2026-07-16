@@ -1,0 +1,65 @@
+@startuml HotelHubManagement-Packages
+
+skinparam packageStyle rectangle
+skinparam stereotypeCBackgroundColor #dbeafe
+
+' ===== Top-level layout =====
+package "src" {
+
+    package "modules" {
+        package "accounts"      as Accounts
+        package "auth"          as Auth
+        package "customers"     as Customers
+        package "rooms"         as Rooms
+        package "bookings"      as Bookings
+        package "payments"      as Payments
+        package "services"      as Services
+        package "staff"         as Staff
+        package "housekeeping"  as Housekeeping
+        package "maintenance"   as Maintenance
+        package "database"      as Database
+    }
+
+    package "root" {
+        class "app.module"   as AppModule
+        class "main.ts"      as Main
+        class "app.controller" as AppCtrl
+    }
+}
+
+' ===== Cross-module dependencies =====
+Auth       --> Accounts    : manages Account via
+Auth       --> Customers   : creates Customer row on register
+Customers  --> Accounts    : FK AccountId
+
+Bookings   --> Rooms
+Bookings   --> Customers
+Bookings   --> Staff       : BookingVersion.StaffInCharge
+
+Payments   --> Bookings
+Payments   --> Customers
+
+Services   --> Bookings
+
+Staff      --> Accounts    : FK AccountId
+Housekeeping --> Rooms
+Housekeeping --> Staff     : ChecklistLog.StaffId
+Maintenance  --> Rooms
+Maintenance  --> Staff     : IssueReport.ReporterId + MaintenanceProve.MaintainerId
+
+AppModule  --> Database
+AppModule  --> Accounts
+AppModule  --> Auth
+AppModule  --> Customers
+AppModule  --> Rooms
+AppModule  --> Bookings
+AppModule  --> Payments
+AppModule  --> Services
+AppModule  --> Staff
+AppModule  --> Housekeeping
+AppModule  --> Maintenance
+
+Main       --> AppModule
+AppCtrl    --> AppModule
+
+@enduml

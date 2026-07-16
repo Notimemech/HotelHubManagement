@@ -1,0 +1,88 @@
+---
+title: HotelHubManagement - Context Map
+---
+flowchart LR
+    subgraph Identity["Identity"]
+        AC["Account<br/>(Aggregate Root)"]
+        RO["Role<br/>(Value Object)"]
+    end
+
+    subgraph CustomerMgmt["Customer Management"]
+        CC["Customer<br/>(Aggregate Root)"]
+        CBA["CustomerBankAccount<br/>(Entity)"]
+    end
+
+    subgraph StaffBC["Staff"]
+        SI["StaffInfo<br/>(Aggregate Root)"]
+    end
+
+    subgraph RoomCatalogue["Room Catalogue"]
+        RT["RoomType<br/>(Aggregate Root)"]
+        RM["Room<br/>(Entity)"]
+    end
+
+    subgraph BookingLifecycle["Booking Lifecycle"]
+        BK["Booking<br/>(Aggregate Root)"]
+        BV["BookingVersion<br/>(Entity)"]
+        BD["BookingDetail<br/>(Entity)"]
+        BS["BookingService<br/>(Entity)"]
+    end
+
+    subgraph PaymentSettlement["Payment Settlement"]
+        PY["Payment<br/>(Aggregate Root)"]
+    end
+
+    subgraph AncillaryServices["Ancillary Services"]
+        SV["Service<br/>(Aggregate Root)"]
+    end
+
+    subgraph Housekeeping["Housekeeping"]
+        CT["ChecklistTemplate<br/>(Aggregate Root)"]
+        CL["ChecklistLog<br/>(Entity)"]
+    end
+
+    subgraph Maintenance["Maintenance"]
+        IR["IssueReport<br/>(Aggregate Root)"]
+        MP["MaintenanceProve<br/>(Entity)"]
+    end
+
+    %% Identity partnerships
+    AC -- Conformist --> CC
+    AC -- Conformist --> SI
+    AC -- Partnership --> RO
+
+    %% Customer
+    CC -- Partnership --> CBA
+    CC -- Conformist --> BK
+
+    %% Room Catalogue
+    RT -- Shared Kernel --> BK
+    RM -- Partnership --> BD
+
+    %% Booking Lifecycle
+    BK -- Customer-Supplier --> BV
+    BV -- Customer-Supplier --> BD
+    BK -- Customer-Supplier --> BS
+    BK -- Partnership --> PY
+
+    %% Services
+    SV -- Customer-Supplier --> BS
+
+    %% Staff cross-context
+    SI -- Conformist --> BV : in charge of
+    SI -- Conformist --> CL : performs
+    SI -- Conformist --> IR : reports
+    SI -- Conformist --> MP : resolves
+
+    %% Housekeeping
+    CT -- Customer-Supplier --> CL
+    RM -- Partnership --> CL
+
+    %% Maintenance
+    RM -- Partnership --> IR
+    IR -- Customer-Supplier --> MP
+
+    classDef ctx fill:#f8fafc,stroke:#64748b,stroke-width:1px;
+    classDef ar fill:#dbeafe,stroke:#1d4ed8,stroke-width:1px;
+    class Identity,CustomerMgmt,StaffBC,RoomCatalogue,BookingLifecycle,PaymentSettlement,AncillaryServices,Housekeeping,Maintenance ctx
+    class AC,CC,SI,RT,BK,PY,SV,CT,IR ar

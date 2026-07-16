@@ -1,0 +1,49 @@
+---
+title: Staff Module - Class Diagram
+---
+classDiagram
+    class StaffModule {
+        <<Module>>
+    }
+
+    class StaffController {
+        <<Controller>>
+        -staffService: StaffService
+        +register(dto: RegisterStaffDto) Promise~StaffInfo~
+        +getMyProfile(req: AuthRequest) Promise~StaffInfo~
+        +assignRole(staffId: number, roleName: string) Promise~void~
+    }
+
+    class StaffService {
+        <<Service>>
+        -staffInfoRepo: Repository~StaffInfo~
+        -accountRepo: Repository~Account~
+        -roleRepo: Repository~Role~
+        -accountRoleRepo: Repository~AccountRole~
+        +createStaff(dto: RegisterStaffDto) Promise~StaffInfo~
+        +findByAccountId(accountId: number) Promise~StaffInfo~
+        +assignRole(accountId: number, roleName: string) Promise~void~
+    }
+
+    class RolesGuard {
+        <<Guard>>
+        +canActivate(ctx: ExecutionContext) boolean
+    }
+
+    class RegisterStaffDto {
+        <<DTO>>
+        +username: string
+        +password: string
+        +fullName: string
+        +cccd: string
+        +phone?: string
+        +address?: string
+        +birthDate?: string
+        +role: string
+    }
+
+    StaffModule --> StaffController
+    StaffModule --> StaffService
+    StaffController --> StaffService
+    StaffController ..> RolesGuard : protects
+    StaffService ..> RegisterStaffDto : consumes

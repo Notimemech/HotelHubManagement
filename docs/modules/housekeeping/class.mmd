@@ -1,0 +1,52 @@
+---
+title: Housekeeping Module - Class Diagram
+---
+classDiagram
+    class HousekeepingModule {
+        <<Module>>
+    }
+
+    class HousekeepingController {
+        <<Controller>>
+        -housekeepingService: HousekeepingService
+        +createTemplate(dto: CreateTemplateDto) Promise~ChecklistTemplate~
+        +listTemplates() Promise~ChecklistTemplate[]~
+        +logChecklist(dto: LogChecklistDto) Promise~ChecklistLog~
+        +listLogsByRoom(roomId: number) Promise~ChecklistLog[]~
+    }
+
+    class HousekeepingService {
+        <<Service>>
+        -templateRepo: Repository~ChecklistTemplate~
+        -logRepo: Repository~ChecklistLog~
+        +createTemplate(dto: CreateTemplateDto) Promise~ChecklistTemplate~
+        +listTemplates() Promise~ChecklistTemplate[]~
+        +logChecklist(staffId: number, dto: LogChecklistDto) Promise~ChecklistLog~
+        +listLogsByRoom(roomId: number) Promise~ChecklistLog[]~
+    }
+
+    class RolesGuard {
+        <<Guard>>
+    }
+
+    class CreateTemplateDto {
+        <<DTO>>
+        +templateType: string
+        +itemName: string
+        +description?: string
+    }
+
+    class LogChecklistDto {
+        <<DTO>>
+        +roomId: number
+        +templateType: string
+        +evidenceImage?: string
+        +notes?: string
+    }
+
+    HousekeepingModule --> HousekeepingController
+    HousekeepingModule --> HousekeepingService
+    HousekeepingController --> HousekeepingService
+    HousekeepingController ..> RolesGuard : protects
+    HousekeepingService ..> CreateTemplateDto : consumes
+    HousekeepingService ..> LogChecklistDto : consumes
