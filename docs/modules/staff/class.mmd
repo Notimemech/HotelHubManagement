@@ -12,6 +12,7 @@ classDiagram
         +register(dto: RegisterStaffDto) Promise~StaffInfo~
         +findAll() Promise~StaffListItemDto[]~
         +me(req: any) Promise~MyProfileDto~
+        +updateMe(req: any, dto: UpdateMyProfileDto) Promise~MyProfileDto~
         +findOne(id: string) Promise~StaffListItemDto~
         +update(id: string, dto: UpdateStaffDto) Promise~StaffInfo~
         +changeRole(id: string, dto: ChangeRoleDto) Promise~void~
@@ -27,6 +28,7 @@ classDiagram
         +findOne(id: string) Promise~StaffListItemDto~
         +findByAccountId(accountId: string) Promise~StaffInfo | null~
         +updateStaff(id: string, dto: UpdateStaffDto) Promise~StaffInfo~
+        +updateMyProfile(accountId: string, dto: UpdateMyProfileDto) Promise~StaffInfo~
         +changeRole(id: string, roleName: string) Promise~void~
     }
 
@@ -65,6 +67,14 @@ classDiagram
         +birthDate?: string
         +isActive?: boolean
         +password?: string
+    }
+
+    class UpdateMyProfileDto {
+        <<DTO Input>>
+        +fullName?: string
+        +phone?: string
+        +address?: string
+        +birthDate?: string
     }
 
     class ChangeRoleDto {
@@ -127,6 +137,7 @@ classDiagram
     StaffController ..> Roles : declares Manager
     StaffService ..> RegisterStaffDto : consumes
     StaffService ..> UpdateStaffDto : consumes
+    StaffService ..> UpdateMyProfileDto : consumes
     StaffService ..> ChangeRoleDto : consumes
     StaffService ..> ROLES : validates roleName
     StaffService ..> StaffInfo : manages

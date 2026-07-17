@@ -9,13 +9,18 @@ classDiagram
     class AccountsService {
         <<Service>>
         -accountRepo: Repository~Account~
-        -accountRoleRepo: Repository~AccountRole~
-        -roleRepo: Repository~Role~
         +create(username: string, passwordHash: string) Promise~Account~
-        +findByUsername(username: string) Promise~Account~
-        +findById(id: number) Promise~Account~
-        +getRoles(accountId: number) Promise~Role[]~
-        +setRole(accountId: number, roleName: string) Promise~void~
+        +findByUsername(username: string) Promise~Account | null~
+        +findById(id: string) Promise~Account | null~
+        +getRoles(accountId: string) Promise~string[]~
+        +setRole(accountId: string, roleName: string) Promise~void~
+    }
+
+    class Roles {
+        <<Constant>>
+        +ROLES: Admin | Manager | Receptionist | Saler | Cleaner | Maintainer | User
+        +isValidRole(role: string) boolean
     }
 
     AccountsModule --> AccountsService
+    AccountsService ..> Roles : validates role name

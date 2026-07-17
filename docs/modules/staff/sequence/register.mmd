@@ -1,0 +1,60 @@
+---
+title: Staff - Register Staff Flow (POST /staff/register)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Manager Client
+    participant Ctrl as StaffController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Service as StaffService
+    participant AccountModel as AccountModel (TypeORM Repository)
+    participant StaffModel as StaffInfoModel (TypeORM Repository)
+    participant Util as Security Utils (bcrypt)
+    participant DB as Database (SQL Server)
+
+    note right of Client: POST /staff/register (with Bearer Token)
+    Client->>Ctrl: RegisterStaffDto (username, password, fullName, cccd, phone, address, birthDate, role)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT
+    Guard-->>Ctrl: Attach user to request & return true
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve metadata @Roles('Manager')
+    RGuard-->>Ctrl: return true
+
+    Ctrl->>Service: createStaff(dto)
+    activate Service
+
+    Service->>Service: isValidRole(dto.role)
+    opt Invalid Role
+        Service-->>Client: Throw ConflictException (Role not allowed)
+    end
+
+    Service->>AccountModel: findOne({ username })
+    AccountModel->>DB: SELECT * FROM Accounts WHERE Username = ?
+    DB-->>AccountModel: row / null
+    AccountModel-->>Service: Account Entity / null
+    opt Username exists
+        Service-->>Client: Throw ConflictException (Username already taken)
+    end
+
+    Note over Service, DB: Run inside Transaction (dataSource.transaction)
+
+    Service->>Util: bcrypt.hash(dto.password, 10)
+    Util-->>Service: passwordHash
+
+    Service->>AccountModel: save(AccountEntity)
+    AccountModel->>DB: INSERT INTO Accounts (Username, Password, IsActive, Role) ...
+    DB-->>AccountModel: persisted Account
+    AccountModel-->>Service: Account Entity
+
+    Service->>StaffModel: save(StaffInfoEntity)
+    StaffModel->>DB: INSERT INTO StaffInfo (AccountId, CCCD, FullName, Phone, Address, BirthDate) ...
+    DB-->>StaffModel: persisted StaffInfo
+    StaffModel-->>Service: StaffInfo Entity
+
+    Service-->>Ctrl: StaffInfo Entity
+    deactivate Service
+    Ctrl-->>Client: HTTP 201 - StaffInfo Entity
+    deactivate Ctrl
