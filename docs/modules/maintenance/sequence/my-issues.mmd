@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    actor Client as Maintainer
+    participant Ctrl as MaintenanceController
+    participant Service as MaintenanceService
+    participant DB as Database
+
+    note right of Client: GET /maintenance/my-issues
+    Client->>Ctrl: GET request
+    activate Ctrl
+
+    Ctrl->>Service: listMyIssues(accountId)
+    activate Service
+
+    Service->>DB: Get staff info & assignments (with issue + room)
+    DB-->>Service: StaffInfo + IssueAssignment[]
+
+    alt Staff not found
+        Service-->>Client: 403 Forbidden
+    end
+
+    Service-->>Ctrl: IssueAssignment[]
+    deactivate Service
+
+    Ctrl-->>Client: 200 OK
+    deactivate Ctrl

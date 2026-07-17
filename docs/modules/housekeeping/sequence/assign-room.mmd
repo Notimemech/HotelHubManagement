@@ -1,0 +1,29 @@
+sequenceDiagram
+    autonumber
+    actor Client as Cleaner
+    participant Ctrl as HousekeepingController
+    participant Service as HousekeepingService
+    participant DB as Database
+
+    note right of Client: POST /housekeeping/logs
+    Client->>Ctrl: LogChecklistDto
+    activate Ctrl
+
+    Ctrl->>Service: logChecklist(accountId, dto)
+    activate Service
+    
+    Service->>DB: Check staff & assignment
+    DB-->>Service: StaffInfo + RoomAssignment
+    
+    alt Invalid staff or not assigned
+        Service-->>Client: 403 Forbidden
+    end
+
+    Service->>DB: INSERT ChecklistLog
+    DB-->>Service: ChecklistLog
+
+    Service-->>Ctrl: ChecklistLog
+    deactivate Service
+    
+    Ctrl-->>Client: 201 Created
+    deactivate Ctrl

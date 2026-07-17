@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    actor Client as Cleaner
+    participant Ctrl as HousekeepingController
+    participant Service as HousekeepingService
+    participant DB as Database
+
+    note right of Client: GET /housekeeping/my-assignments
+    Client->>Ctrl: GET request
+    activate Ctrl
+
+    Ctrl->>Service: listMyAssignments(accountId)
+    activate Service
+    
+    Service->>DB: Get staff info & assignments
+    DB-->>Service: StaffInfo + RoomAssignment[]
+
+    alt Staff not found
+        Service-->>Client: 403 Forbidden
+    end
+
+    Service-->>Ctrl: RoomAssignment[]
+    deactivate Service
+    
+    Ctrl-->>Client: 200 OK
+    deactivate Ctrl

@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor Client as Maintainer
+    participant Ctrl as MaintenanceController
+    participant Service as MaintenanceService
+    participant DB as Database
+
+    note right of Client: POST /maintenance/issues/:id/prove
+    Client->>Ctrl: ProveIssueDto
+    activate Ctrl
+
+    Ctrl->>Service: proveIssue(maintainerAccountId, issueId, dto)
+    activate Service
+    
+    Service->>DB: Check staff & assignment
+    DB-->>Service: StaffInfo + IssueAssignment
+
+    alt Staff not found or not assigned
+        Service-->>Client: 403 Forbidden
+    end
+
+    Service->>DB: BEGIN TRANSACTION
+    Service->>DB: INSERT Prove + UPDATE Issue status='Resolved'
+    Service->>DB: COMMIT
+    DB-->>Service: MaintenanceProve
+
+    Service-->>Ctrl: MaintenanceProve
+    deactivate Service
+    
+    Ctrl-->>Client: 201 Created
+    deactivate Ctrl

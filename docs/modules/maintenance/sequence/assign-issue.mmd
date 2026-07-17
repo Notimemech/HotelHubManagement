@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor Client as Manager
+    participant Ctrl as MaintenanceController
+    participant Service as MaintenanceService
+    participant DB as Database
+
+    note right of Client: POST /maintenance/assignments
+    Client->>Ctrl: AssignIssueDto
+    activate Ctrl
+
+    Ctrl->>Service: assignIssue(managerAccountId, dto)
+    activate Service
+    
+    Service->>DB: Check issue & maintainer
+    DB-->>Service: IssueReport + StaffInfo
+
+    alt Issue not found
+        Service-->>Client: 404 Not Found
+    end
+
+    Service->>DB: Check existing assignment
+    DB-->>Service: IssueAssignment / null
+
+    alt Already assigned
+        Service-->>Ctrl: Existing IssueAssignment
+    else New assignment
+        Service->>DB: INSERT IssueAssignment
+        DB-->>Service: IssueAssignment
+    end
+
+    Service-->>Ctrl: IssueAssignment
+    deactivate Service
+    
+    Ctrl-->>Client: 201 Created
+    deactivate Ctrl
