@@ -10,6 +10,7 @@ import {
 import { MaintenanceService } from './maintenance.service';
 import { ReportIssueDto } from './dto/report-issue.dto';
 import { ProveIssueDto } from './dto/prove-issue.dto';
+import { AssignIssueDto } from './dto/assign-issue.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -32,6 +33,12 @@ export class MaintenanceController {
   }
 
   @Roles('Maintainer', 'Manager')
+  @Get('my-issues')
+  myIssues(@Request() req) {
+    return this.maintenanceService.listMyIssues(req.user.sub);
+  }
+
+  @Roles('Maintainer', 'Manager')
   @Post('issues/:id/prove')
   prove(
     @Request() req,
@@ -45,5 +52,15 @@ export class MaintenanceController {
   @Get('issues/:id/proves')
   listProves(@Param('id') id: string) {
     return this.maintenanceService.listProves(id);
+  }
+
+  @Roles('Manager')
+  @Post('assignments')
+  assign(@Request() req, @Body() dto: AssignIssueDto) {
+    return this.maintenanceService.assignIssue(
+      req.user.sub,
+      dto.issueId,
+      dto.maintainerStaffId,
+    );
   }
 }

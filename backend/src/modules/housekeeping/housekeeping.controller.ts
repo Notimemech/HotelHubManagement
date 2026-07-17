@@ -10,6 +10,7 @@ import {
 import { HousekeepingService } from './housekeeping.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { LogChecklistDto } from './dto/log-checklist.dto';
+import { AssignRoomDto } from './dto/assign-room.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -37,9 +38,25 @@ export class HousekeepingController {
     return this.housekeepingService.logChecklist(req.user.sub, dto);
   }
 
+  @Roles('Cleaner', 'Manager')
+  @Get('my-assignments')
+  myAssignments(@Request() req) {
+    return this.housekeepingService.listMyAssignments(req.user.sub);
+  }
+
   @Roles('Manager', 'Receptionist')
   @Get('logs/room/:roomId')
   listByRoom(@Param('roomId') roomId: string) {
     return this.housekeepingService.listLogsByRoom(roomId);
+  }
+
+  @Roles('Manager')
+  @Post('assignments')
+  assign(@Request() req, @Body() dto: AssignRoomDto) {
+    return this.housekeepingService.assignRoom(
+      req.user.sub,
+      dto.roomId,
+      dto.cleanerStaffId,
+    );
   }
 }

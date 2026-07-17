@@ -4,49 +4,123 @@ title: Housekeeping Module - Class Diagram
 classDiagram
     class HousekeepingModule {
         <<Module>>
+        +HousekeepingController
+        +HousekeepingService
+        +StaffModule
     }
 
     class HousekeepingController {
         <<Controller>>
         -housekeepingService: HousekeepingService
-        +createTemplate(dto: CreateTemplateDto) Promise~ChecklistTemplate~
-        +listTemplates() Promise~ChecklistTemplate[]~
-        +logChecklist(dto: LogChecklistDto) Promise~ChecklistLog~
-        +listLogsByRoom(roomId: number) Promise~ChecklistLog[]~
+        +POST templates CreateTemplateDto ChecklistTemplate
+        +GET templates ChecklistTemplate[]
+        +POST logs LogChecklistDto ChecklistLog
+        +GET my-assignments RoomAssignment[]
+        +GET logs/room/:roomId ChecklistLog[]
+        +POST assignments AssignRoomDto RoomAssignment
     }
 
     class HousekeepingService {
         <<Service>>
         -templateRepo: Repository~ChecklistTemplate~
         -logRepo: Repository~ChecklistLog~
-        +createTemplate(dto: CreateTemplateDto) Promise~ChecklistTemplate~
-        +listTemplates() Promise~ChecklistTemplate[]~
-        +logChecklist(staffId: number, dto: LogChecklistDto) Promise~ChecklistLog~
-        +listLogsByRoom(roomId: number) Promise~ChecklistLog[]~
+        -assignmentRepo: Repository~RoomAssignment~
+        -staffService: StaffService
+        +createTemplate(dto) ChecklistTemplate
+        +listTemplates() ChecklistTemplate[]
+        +logChecklist(accountId, dto) ChecklistLog
+        +listMyAssignments(accountId) RoomAssignment[]
+        +listLogsByRoom(roomId) ChecklistLog[]
+        +assignRoom(managerAccountId, roomId, cleanerStaffId) RoomAssignment
     }
 
-    class RolesGuard {
-        <<Guard>>
+    class ChecklistTemplate {
+        <<Entity>>
+        +templateId: uuid
+        +templateType: string
+        +itemName: string
+        +description: string
+    }
+
+    class ChecklistLog {
+        <<Entity>>
+        +logId: uuid
+        +roomId: uuid
+        +staffId: uuid
+        +templateType: string
+        +logTime: Date
+        +evidenceImage: string
+        +notes: string
+    }
+
+    class RoomAssignment {
+        <<Entity>>
+        +assignmentId: uuid
+        +roomId: uuid
+        +cleanerId: uuid
+        +assignedBy: uuid
+        +assignedAt: Date
+    }
+
+    class Room {
+        <<Entity>>
+        +roomId: uuid
+        +roomCode: string
+        +status: string
+    }
+
+    class StaffInfo {
+        <<Entity>>
+        +staffId: uuid
+        +accountId: uuid
+        +fullName: string
+    }
+
+    class StaffService {
+        <<Service>>
+        +findByAccountId(accountId) StaffInfo
+        +findOne(staffId) StaffInfo
     }
 
     class CreateTemplateDto {
         <<DTO>>
         +templateType: string
         +itemName: string
-        +description?: string
+        +description: string
     }
 
     class LogChecklistDto {
         <<DTO>>
-        +roomId: number
+        +roomId: uuid
         +templateType: string
-        +evidenceImage?: string
-        +notes?: string
+        +evidenceImage: string
+        +notes: string
+    }
+
+    class AssignRoomDto {
+        <<DTO>>
+        +roomId: uuid
+        +cleanerStaffId: uuid
     }
 
     HousekeepingModule --> HousekeepingController
     HousekeepingModule --> HousekeepingService
+    HousekeepingModule --> StaffModule
     HousekeepingController --> HousekeepingService
-    HousekeepingController ..> RolesGuard : protects
-    HousekeepingService ..> CreateTemplateDto : consumes
-    HousekeepingService ..> LogChecklistDto : consumes
+    HousekeepingService --> StaffService : resolves StaffId by accountId
+    HousekeepingService --> ChecklistTemplate : persist
+    HousekeepingService --> ChecklistLog : persist
+    HousekeepingService --> RoomAssignment : persist + check
+
+    RoomAssignment --> Room : RoomID
+    RoomAssignment --> StaffInfo : CleanerId
+    ChecklistLog --> Room : RoomID
+    ChecklistLog --> StaffInfo : StaffId
+    ChecklistLog --> ChecklistTemplate : TemplateType
+
+    HousekeepingService ..> CreateTemplateDto
+    HousekeepingService ..> LogChecklistDto
+    HousekeepingService ..> AssignRoomDto
+
+    note for HousekeepingController "Roles: Manager for templates/assign, Cleaner or Manager for logs/my-assignments, Manager or Receptionist for logs/room/:roomId"
+    note for RoomAssignment "Manager assigns Cleaner to Room. Cleaner must have assignment before logging checklist."

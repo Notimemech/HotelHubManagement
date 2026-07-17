@@ -4,47 +4,126 @@ title: Maintenance Module - Class Diagram
 classDiagram
     class MaintenanceModule {
         <<Module>>
+        +MaintenanceController
+        +MaintenanceService
+        +StaffModule
     }
 
     class MaintenanceController {
         <<Controller>>
         -maintenanceService: MaintenanceService
-        +reportIssue(dto: ReportIssueDto) Promise~IssueReport~
-        +listIssues() Promise~IssueReport[]~
-        +proveIssue(issueId: number, dto: ProveIssueDto) Promise~MaintenanceProve~
-        +listProves(issueId: number) Promise~MaintenanceProve[]~
+        +POST issues ReportIssueDto IssueReport
+        +GET issues IssueReport[]
+        +GET my-issues IssueAssignment[]
+        +POST issues/:id/prove ProveIssueDto MaintenanceProve
+        +GET issues/:id/proves MaintenanceProve[]
+        +POST assignments AssignIssueDto IssueAssignment
     }
 
     class MaintenanceService {
         <<Service>>
         -issueRepo: Repository~IssueReport~
         -proveRepo: Repository~MaintenanceProve~
-        +reportIssue(reporterId: number, dto: ReportIssueDto) Promise~IssueReport~
-        +listIssues() Promise~IssueReport[]~
-        +proveIssue(maintainerId: number, issueId: number, dto: ProveIssueDto) Promise~MaintenanceProve~
-        +listProves(issueId: number) Promise~MaintenanceProve[]~
+        -assignmentRepo: Repository~IssueAssignment~
+        -dataSource: DataSource
+        -staffService: StaffService
+        +reportIssue(reporterAccountId, dto) IssueReport
+        +listIssues() IssueReport[]
+        +listMyIssues(accountId) IssueAssignment[]
+        +proveIssue(maintainerAccountId, issueId, dto) MaintenanceProve
+        +listProves(issueId) MaintenanceProve[]
+        +assignIssue(managerAccountId, issueId, maintainerStaffId) IssueAssignment
     }
 
-    class RolesGuard {
-        <<Guard>>
+    class IssueReport {
+        <<Entity>>
+        +issueId: uuid
+        +roomId: uuid
+        +reporterId: uuid
+        +description: string
+        +issueImage: string
+        +status: string
+        +createdAt: Date
+    }
+
+    class MaintenanceProve {
+        <<Entity>>
+        +proveId: uuid
+        +issueId: uuid
+        +maintainerId: uuid
+        +finishImage: string
+        +finishVideo: string
+        +resolvedAt: Date
+    }
+
+    class IssueAssignment {
+        <<Entity>>
+        +assignmentId: uuid
+        +issueId: uuid
+        +maintainerId: uuid
+        +assignedBy: uuid
+        +assignedAt: Date
+    }
+
+    class Room {
+        <<Entity>>
+        +roomId: uuid
+        +roomCode: string
+        +status: string
+    }
+
+    class StaffInfo {
+        <<Entity>>
+        +staffId: uuid
+        +accountId: uuid
+        +fullName: string
+    }
+
+    class StaffService {
+        <<Service>>
+        +findByAccountId(accountId) StaffInfo
+        +findOne(staffId) StaffInfo
     }
 
     class ReportIssueDto {
         <<DTO>>
-        +roomId: number
+        +roomId: uuid
         +description: string
-        +issueImage?: string
+        +issueImage: string
     }
 
     class ProveIssueDto {
         <<DTO>>
-        +finishImage?: string
-        +finishVideo?: string
+        +finishImage: string
+        +finishVideo: string
+    }
+
+    class AssignIssueDto {
+        <<DTO>>
+        +issueId: uuid
+        +maintainerStaffId: uuid
     }
 
     MaintenanceModule --> MaintenanceController
     MaintenanceModule --> MaintenanceService
+    MaintenanceModule --> StaffModule
     MaintenanceController --> MaintenanceService
-    MaintenanceController ..> RolesGuard : protects
-    MaintenanceService ..> ReportIssueDto : consumes
-    MaintenanceService ..> ProveIssueDto : consumes
+    MaintenanceService --> StaffService : resolves StaffId by accountId
+    MaintenanceService --> IssueReport : persist
+    MaintenanceService --> MaintenanceProve : persist + update IssueReport.status
+    MaintenanceService --> IssueAssignment : persist + check
+
+    IssueReport --> Room : RoomID
+    IssueReport --> StaffInfo : ReporterId
+    MaintenanceProve --> IssueReport : IssueId
+    MaintenanceProve --> StaffInfo : MaintainerId
+    IssueAssignment --> IssueReport : IssueId
+    IssueAssignment --> StaffInfo : MaintainerId
+
+    MaintenanceService ..> ReportIssueDto
+    MaintenanceService ..> ProveIssueDto
+    MaintenanceService ..> AssignIssueDto
+
+    note for MaintenanceController "Roles: anyone for POST issues, Maintainer or Manager for prove/my-issues, Manager for assign"
+    note for MaintenanceService "proveIssue is transactional: create Prove + set Issue.status='Resolved'"
+    note for IssueAssignment "Manager assigns Maintainer to Issue. Maintainer must have assignment before proving."

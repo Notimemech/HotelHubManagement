@@ -52,7 +52,13 @@ export function Navbar() {
                     </div>
                     {user.role !== "User" && (
                       <Link
-                        href={["Manager", "Receptionist", "Saler"].includes(user.role) ? "/admin" : "/tasks"}
+                        href={
+                          user.role === "Cleaner"
+                            ? "/staff/cleaner"
+                            : user.role === "Maintainer"
+                              ? "/staff/maintainer"
+                              : "/admin"
+                        }
                         className="flex items-center gap-2 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 w-full text-left"
                       >
                         <User className="w-4 h-4 text-zinc-400" />
