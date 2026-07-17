@@ -1,0 +1,46 @@
+---
+title: Services - Update Service Flow (PATCH /services/:id)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Manager Client
+    participant Ctrl as ServicesController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Svc as ServicesService
+    participant ServiceRepo as ServiceRepo (TypeORM)
+    participant DB as Database (SQL Server)
+
+    Note right of Client: PATCH /services/:id (with Bearer Token, role=Manager)
+    Client->>Ctrl: UpdateServiceDto (serviceName?, price?) + path :id
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard-->>Ctrl: return true (JWT verified)
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve @Roles('Manager')
+    alt Not Manager
+        RGuard-->>Client: Throw ForbiddenException
+    end
+    RGuard-->>Ctrl: return true
+
+    Ctrl->>Svc: update(id, dto)
+    activate Svc
+    Svc->>ServiceRepo: findOne({ where: { serviceId: id } })
+    ServiceRepo->>DB: SELECT * FROM Services WHERE ServiceId = ?
+    DB-->>ServiceRepo: row / null
+    ServiceRepo-->>Svc: ServiceEntity / null
+    opt ServiceEntity not found
+        Svc-->>Client: Throw NotFoundException
+    end
+
+    Note over Svc: Apply partial field updates from dto via Object.assign
+
+    Svc->>ServiceRepo: save(svc)
+    ServiceRepo->>DB: UPDATE Services SET ServiceName=?, Price=? WHERE ServiceId = ?
+    DB-->>ServiceRepo: updated row
+    ServiceRepo-->>Svc: Updated ServiceEntity
+    Svc-->>Ctrl: Updated ServiceEntity
+    deactivate Svc
+
+    Ctrl-->>Client: HTTP 200 - Updated ServiceEntity
+    deactivate Ctrl

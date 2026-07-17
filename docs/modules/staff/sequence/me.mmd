@@ -1,0 +1,34 @@
+---
+title: Staff - Get My Profile Flow (GET /staff/me)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Staff Client
+    participant Ctrl as StaffController
+    participant Guard as AuthGuard
+    participant Service as StaffService
+    participant StaffModel as StaffInfoModel (TypeORM Repository)
+    participant DB as Database (SQL Server)
+
+    note right of Client: GET /staff/me (with Bearer Token)
+    Client->>Ctrl: (request headers: Authorization Bearer)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT & attach user (sub = accountId) to request
+    alt JWT invalid / expired
+        Guard-->>Client: Throw UnauthorizedException
+    else JWT valid
+        Guard-->>Ctrl: return true
+    end
+
+    Ctrl->>Service: findByAccountId(req.user.sub)
+    activate Service
+    Service->>StaffModel: findOne({ where: { accountId } })
+    StaffModel->>DB: SELECT * FROM StaffInfo WHERE AccountId = ?
+    DB-->>StaffModel: row / null
+    StaffModel-->>Service: StaffInfo Entity / null
+    Service-->>Ctrl: StaffInfo Entity / null
+    deactivate Service
+
+    Ctrl-->>Client: HTTP 200 - { staff: StaffInfo }
+    deactivate Ctrl

@@ -1,0 +1,44 @@
+---
+title: Services - Create Service Flow (POST /services)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Manager Client
+    participant Ctrl as ServicesController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Svc as ServicesService
+    participant ServiceRepo as ServiceRepo (TypeORM)
+    participant DB as Database (SQL Server)
+
+    Note right of Client: POST /services (with Bearer Token, role=Manager)
+    Client->>Ctrl: CreateServiceDto (serviceName, price)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT & attach user to request
+    alt JWT invalid / expired
+        Guard-->>Client: Throw UnauthorizedException
+    else JWT valid
+        Guard-->>Ctrl: return true
+    end
+
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve metadata @Roles('Manager')
+    alt Not Manager
+        RGuard-->>Client: Throw ForbiddenException
+    else Manager
+        RGuard-->>Ctrl: return true
+    end
+
+    Ctrl->>Svc: create(dto)
+    activate Svc
+    Svc->>ServiceRepo: create(dto)
+    Svc->>ServiceRepo: save(entity)
+    ServiceRepo->>DB: INSERT INTO Services (ServiceName, Price)
+    DB-->>ServiceRepo: persisted ServiceEntity
+    ServiceRepo-->>Svc: ServiceEntity
+    Svc-->>Ctrl: ServiceEntity
+    deactivate Svc
+
+    Ctrl-->>Client: HTTP 201 - ServiceEntity
+    deactivate Ctrl

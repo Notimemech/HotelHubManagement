@@ -11,6 +11,7 @@ import { Account } from '../accounts/entities/account.entity';
 import { isValidRole } from '../accounts/roles.constants';
 import { RegisterStaffDto } from './dto/register-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Injectable()
 export class StaffService {
@@ -127,6 +128,22 @@ export class StaffService {
 
       return manager.save(staff);
     });
+  }
+
+  async updateMyProfile(accountId: string, dto: UpdateMyProfileDto): Promise<StaffInfo> {
+    const staff = await this.staffRepo.findOne({
+      where: { accountId: accountId },
+    });
+    if (!staff) throw new NotFoundException('Staff not found');
+
+    if (dto.fullName !== undefined) staff.fullName = dto.fullName;
+    if (dto.phone !== undefined) staff.phone = dto.phone;
+    if (dto.address !== undefined) staff.address = dto.address;
+    if (dto.birthDate !== undefined) {
+      staff.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
+    }
+
+    return this.staffRepo.save(staff);
   }
 
   async changeRole(id: string, roleName: string): Promise<void> {

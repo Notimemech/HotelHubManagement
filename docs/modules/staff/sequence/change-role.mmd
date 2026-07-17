@@ -1,0 +1,50 @@
+---
+title: Staff - Change Role Flow (PATCH /staff/:id/role)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Manager Client
+    participant Ctrl as StaffController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Service as StaffService
+    participant StaffModel as StaffInfoModel (TypeORM Repository)
+    participant AccountModel as AccountModel (TypeORM Repository)
+    participant DB as Database (SQL Server)
+
+    note right of Client: PATCH /staff/:id/role (with Bearer Token)
+    Client->>Ctrl: ChangeRoleDto (roleName) + path :id (staffId)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT
+    Guard-->>Ctrl: Attach user to request & return true
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve metadata @Roles('Manager')
+    RGuard-->>Ctrl: return true
+
+    Ctrl->>Service: changeRole(id, dto.roleName)
+    activate Service
+
+    Service->>Service: isValidRole(roleName)
+    opt Role not allowed
+        Service-->>Client: Throw NotFoundException (Role not found)
+    end
+
+    Service->>StaffModel: findOne({ where: { staffId: id } })
+    StaffModel->>DB: SELECT * FROM StaffInfo WHERE StaffId = ?
+    DB-->>StaffModel: row / null
+    StaffModel-->>Service: StaffInfo Entity / null
+    opt Staff not found
+        Service-->>Client: Throw NotFoundException
+    end
+
+    Note over Service, DB: Run inside Transaction (dataSource.transaction)
+
+    Service->>AccountModel: update({ accountId: staff.accountId }, { role: roleName })
+    AccountModel->>DB: UPDATE Accounts SET Role = ? WHERE AccountId = ?
+    DB-->>AccountModel: ok
+
+    Service-->>Ctrl: void (success)
+    deactivate Service
+    Ctrl-->>Client: HTTP 200 - { message: "Role updated successfully" }
+    deactivate Ctrl

@@ -212,6 +212,60 @@ export function walkInBooking(dto: Record<string, any>) {
   });
 }
 
+// Saler-only booking flows
+export type CreateSaleBookingDto = {
+  customerFullName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  customerCccd?: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  children: number;
+  roomIds: string[];
+  specialRequest?: string;
+  evidenceImage?: string;
+};
+
+export type UpdateSaleBookingDto = {
+  checkIn?: string;
+  checkOut?: string;
+  adults?: number;
+  children?: number;
+  roomIds?: string[];
+  specialRequest?: string;
+  requestEvidenceImage: string;
+  changeReason?: string;
+};
+
+export function createSaleBooking(dto: CreateSaleBookingDto) {
+  return apiRequest<{ message: string; bookingId: string; customerId: string; isNewCustomer: boolean }>(
+    `/sale/bookings`,
+    { method: "POST", body: JSON.stringify(dto) },
+  );
+}
+
+export function updateSaleBooking(id: string, dto: UpdateSaleBookingDto) {
+  return apiRequest<{ message: string; versionNumber: number; bookingId: string }>(
+    `/sale/bookings/${id}`,
+    { method: "PUT", body: JSON.stringify(dto) },
+  );
+}
+
+export function softDeleteBooking(id: string) {
+  return apiRequest<{ message: string; bookingId: string }>(
+    `/sale/bookings/${id}`,
+    { method: "DELETE" },
+  );
+}
+
+export function cancelBookingForStaff(id: string) {
+  return apiRequest<{ message: string; bookingId: string; status: string }>(
+    `/sale/bookings/${id}/cancel`,
+    { method: "PATCH" },
+  );
+}
+
 // Services
 export function listServices() {
   return apiRequest<Service[]>("/services");

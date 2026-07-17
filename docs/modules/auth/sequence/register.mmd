@@ -1,0 +1,42 @@
+---
+title: Auth - Register Flow (POST /auth/register)
+---
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Ctrl as AuthController
+    participant Service as AuthService
+    participant AccSvc as AccountsService
+    participant AccountModel as AccountModel (TypeORM Repository)
+    participant CustomerModel as CustomerModel (TypeORM Repository)
+    participant Util as Security Utils (bcrypt / crypto / jwt)
+    participant DB as Database (SQL Server)
+
+    note right of Client: POST /auth/register
+    Client->>Ctrl: RegisterDto (username, fullName, email, phone, password)
+    Ctrl->>Service: register(dto)
+    Service->>AccountModel: findOne({ username })
+    AccountModel->>DB: SELECT * FROM Accounts WHERE Username = ?
+    DB-->>AccountModel: row / null
+    AccountModel-->>Service: account / null
+    opt Username exists
+        Service-->>Client: Throw ConflictException
+    end
+    Service->>Util: bcrypt.hash(password, 10)
+    Util-->>Service: passwordHash
+    Service->>AccSvc: create(username, passwordHash)
+    AccSvc->>AccountModel: save(account)
+    AccountModel->>DB: INSERT INTO Accounts ...
+    DB-->>AccountModel: persisted row
+    AccountModel-->>AccSvc: Account Entity
+    AccSvc-->>Service: Account Entity
+    Service->>AccSvc: setRole(accountId, 'User')
+    AccSvc->>AccountModel: save(role)
+    AccountModel->>DB: UPDATE Accounts SET Role = 'User' WHERE AccountId = ?
+    DB-->>AccountModel: ok
+    Service->>CustomerModel: save(customer)
+    CustomerModel->>DB: INSERT INTO Customers ...
+    DB-->>CustomerModel: persisted row
+    CustomerModel-->>Service: Customer Entity
+    Service-->>Ctrl: RegisterResponseDto (message, customerId)
+    Ctrl-->>Client: HTTP 201 - RegisterResponseDto

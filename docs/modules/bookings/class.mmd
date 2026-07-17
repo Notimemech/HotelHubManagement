@@ -10,10 +10,25 @@ classDiagram
         <<Controller>>
         -bookingsService: BookingsService
         +create(req: AuthRequest, dto: CreateBookingDto) Promise~Booking~
+        +createWalkIn(req: AuthRequest, dto: CreateWalkInBookingDto) Promise~any~
+        +findAllForStaff(filter: ListBookingsFilterDto) Promise~Booking[]~
+        +findOneForStaff(id: string) Promise~Booking~
+        +listVersionsForStaff(id: string) Promise~BookingVersion[]~
+        +checkout(id: string) Promise~any~
         +findAll(req: AuthRequest) Promise~Booking[]~
-        +findOne(req: AuthRequest, id: number) Promise~Booking~
-        +update(req: AuthRequest, id: number, updateData: BookingPatch) Promise~Booking~
-        +cancel(req: AuthRequest, id: number) Promise~Booking~
+        +findOne(req: AuthRequest, id: string) Promise~Booking~
+        +listVersions(req: AuthRequest, id: string) Promise~BookingVersion[]~
+        +update(req: AuthRequest, id: string, dto: CreateBookingDto) Promise~any~
+        +cancel(req: AuthRequest, id: string) Promise~any~
+    }
+
+    class SaleBookingsController {
+        <<Controller>>
+        -bookingsService: BookingsService
+        +createForSaler(req: any, dto: CreateSaleBookingDto) Promise~any~
+        +updateForSaler(req: any, id: string, dto: UpdateSaleBookingDto) Promise~any~
+        +softDelete(req: any, id: string) Promise~any~
+        +cancelForSaler(req: any, id: string) Promise~any~
     }
 
     class BookingsService {
@@ -21,14 +36,36 @@ classDiagram
         -bookingRepo: Repository~Booking~
         -bookingDetailRepo: Repository~BookingDetail~
         -roomRepo: Repository~Room~
-        +create(customerId: number, dto: CreateBookingDto) Promise~Booking~
-        +findAll(customerId: number) Promise~Booking[]~
-        +findOne(customerId: number, id: number) Promise~Booking~
-        +update(customerId: number, id: number, patch: BookingPatch) Promise~Booking~
-        +cancel(customerId: number, id: number) Promise~Booking~
+        -customerRepo: Repository~Customer~
+        -accountRepo: Repository~Account~
+        -accountsService: AccountsService
+        -staffService: StaffService
+        -dataSource: DataSource
+        -resolveCustomerId(accountId: string) Promise~string~
+        -createBookingForCustomer(customerId: string, dto: CreateBookingDto, opts?: any) Promise~any~
+        +create(accountId: string, dto: CreateBookingDto) Promise~any~
+        +createWalkIn(receptionistAccountId: string, dto: CreateWalkInBookingDto) Promise~any~
+        +findAll(accountId: string) Promise~Booking[]~
+        +findOne(accountId: string, bookingId: string) Promise~Booking~
+        +listVersions(accountId: string, bookingId: string) Promise~BookingVersion[]~
+        +update(accountId: string, bookingId: string, updateData: any) Promise~any~
+        +cancel(accountId: string, bookingId: string) Promise~any~
+        +findAllForStaff(filter: ListBookingsFilterDto) Promise~Booking[]~
+        +findOneForStaff(bookingId: string) Promise~Booking~
+        +listVersionsForStaff(bookingId: string) Promise~BookingVersion[]~
+        +checkout(bookingId: string) Promise~any~
+        +createForSaler(accountId: string, dto: CreateSaleBookingDto) Promise~any~
+        +updateForSaler(accountId: string, bookingId: string, dto: UpdateSaleBookingDto) Promise~any~
+        +softDelete(accountId: string, bookingId: string) Promise~any~
+        +cancelForSaler(accountId: string, bookingId: string) Promise~any~
     }
 
     class AuthGuard {
+        <<Guard>>
+        +canActivate(ctx: ExecutionContext) boolean
+    }
+
+    class RolesGuard {
         <<Guard>>
         +canActivate(ctx: ExecutionContext) boolean
     }
@@ -39,12 +76,101 @@ classDiagram
         +checkOut: string
         +adults: number
         +children: number
-        +roomIds: number[]
+        +roomIds: string[]
         +specialRequest?: string
     }
 
+    class CreateWalkInBookingDto {
+        <<DTO>>
+        +customerFullName: string
+        +customerPhone: string
+        +customerEmail?: string
+        +customerCccd?: string
+        +checkIn: string
+        +checkOut: string
+        +adults: number
+        +children: number
+        +roomIds: string[]
+        +specialRequest?: string
+    }
+
+    class CreateSaleBookingDto {
+        <<DTO>>
+        +customerFullName: string
+        +customerPhone: string
+        +customerEmail?: string
+        +customerCccd?: string
+        +checkIn: string
+        +checkOut: string
+        +adults: number
+        +children: number
+        +roomIds: string[]
+        +specialRequest?: string
+        +evidenceImage?: string
+    }
+
+    class UpdateSaleBookingDto {
+        <<DTO>>
+        +checkIn?: string
+        +checkOut?: string
+        +adults?: number
+        +children?: number
+        +roomIds?: string[]
+        +specialRequest?: string
+        +requestEvidenceImage: string
+        +changeReason?: string
+    }
+
+    class ListBookingsFilterDto {
+        <<DTO>>
+        +status?: string
+        +from?: string
+        +to?: string
+        +q?: string
+    }
+
+    class Booking {
+        <<Entity>>
+        +bookingId: string
+        +customerId: string
+        +bookingDate: Date
+        +currentVersion: number
+        +totalPrice: number
+        +status: string
+        +isDeleted: boolean
+        +evidenceImage: string | null
+    }
+
+    class BookingVersion {
+        <<Entity>>
+        +versionId: string
+        +bookingId: string
+        +versionNumber: number
+        +checkIn: Date
+        +checkOut: Date
+        +adults: number
+        +children: number
+        +specialRequest: string
+        +totalAmountAtThisVersion: number
+        +staffInChargeId: string
+        +changeReason: string
+        +requestEvidenceImage: string
+        +createdAt: Date
+    }
+
     BookingsModule --> BookingsController
+    BookingsModule --> SaleBookingsController
     BookingsModule --> BookingsService
     BookingsController --> BookingsService
+    SaleBookingsController --> BookingsService
     BookingsController ..> AuthGuard : protects
+    BookingsController ..> RolesGuard : protects
+    SaleBookingsController ..> AuthGuard : protects
+    SaleBookingsController ..> RolesGuard : protects
     BookingsService ..> CreateBookingDto : consumes
+    BookingsService ..> CreateWalkInBookingDto : consumes
+    BookingsService ..> CreateSaleBookingDto : consumes
+    BookingsService ..> UpdateSaleBookingDto : consumes
+    BookingsService ..> ListBookingsFilterDto : consumes
+    BookingsService ..> Booking : manages
+    BookingsService ..> BookingVersion : manages

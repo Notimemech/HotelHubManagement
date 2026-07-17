@@ -8,9 +8,12 @@ import {
   getBooking,
   checkoutBooking,
   getBookingPaymentSummary,
+  cancelBookingForStaff,
+  softDeleteBooking,
   type Booking,
 } from "@/lib/admin-api";
 import { useAuth } from "@/lib/auth-context";
+import { SaleEditModal } from "../_components/SaleEditModal";
 
 const VND = new Intl.NumberFormat("vi-VN");
 const STATUS_COLORS: Record<string, string> = {
@@ -31,6 +34,7 @@ export default function BookingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -57,6 +61,34 @@ export default function BookingDetailPage() {
       await load();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Lỗi check-out");
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleCancelSale = async () => {
+    if (!booking) return;
+    if (!confirm("Bạn có chắc chắn muốn hủy đặt phòng này? Trạng thái sẽ được cập nhật thành Cancelled.")) return;
+    setActioning(true);
+    try {
+      await cancelBookingForStaff(booking.bookingId);
+      await load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Lỗi hủy đặt phòng");
+    } finally {
+      setActioning(false);
+    }
+  };
+
+  const handleDeleteSale = async () => {
+    if (!booking) return;
+    if (!confirm("Bạn có chắc chắn muốn XÓA đặt phòng này (Xóa mềm)?")) return;
+    setActioning(true);
+    try {
+      await softDeleteBooking(booking.bookingId);
+      router.push("/admin/bookings");
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Lỗi xóa đặt phòng");
     } finally {
       setActioning(false);
     }
@@ -230,6 +262,39 @@ export default function BookingDetailPage() {
                 {actioning ? <Spinner className="w-4 h-4 mx-auto" /> : "Check-out nhận phòng"}
               </button>
             )}
+
+            {user?.role === "Saler" && (
+              <div className="pt-4 mt-2 border-t border-zinc-100 space-y-2">
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Thao tác của Saler</p>
+                {(booking.status !== "Cancelled" && booking.status !== "Completed") && (
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    disabled={actioning}
+                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium cursor-pointer disabled:opacity-60"
+                  >
+                    Sửa đặt phòng (yêu cầu minh chứng)
+                  </button>
+                )}
+                {booking.status !== "Cancelled" && booking.status !== "Completed" && (
+                  <button
+                    onClick={handleCancelSale}
+                    disabled={actioning}
+                    className="w-full py-2 bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium cursor-pointer disabled:opacity-60"
+                  >
+                    Hủy đặt phòng
+                  </button>
+                )}
+                {booking.status !== "Completed" && (
+                  <button
+                    onClick={handleDeleteSale}
+                    disabled={actioning}
+                    className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium cursor-pointer disabled:opacity-60"
+                  >
+                    Xóa mềm đặt phòng
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Services Request Card */}
@@ -257,6 +322,17 @@ export default function BookingDetailPage() {
           </div>
         </div>
       </div>
+      {showEditModal && booking && (
+        <SaleEditModal
+          open={showEditModal}
+          booking={booking}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={() => {
+            setShowEditModal(false);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

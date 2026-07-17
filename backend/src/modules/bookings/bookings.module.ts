@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BookingsController } from './bookings.controller';
+import { SaleBookingsController } from './sale-bookings.controller';
 import { BookingsService } from './bookings.service';
 import { Booking } from './entities/booking.entity';
 import { BookingVersion } from './entities/booking-version.entity';
@@ -24,7 +25,7 @@ import { Account } from '../accounts/entities/account.entity';
     AccountsModule,
     StaffModule,
   ],
-  controllers: [BookingsController],
+  controllers: [BookingsController, SaleBookingsController],
   providers: [BookingsService],
   exports: [BookingsService],
 })

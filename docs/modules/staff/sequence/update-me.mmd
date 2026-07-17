@@ -1,0 +1,44 @@
+---
+title: Staff - Update My Profile Flow (PATCH /staff/me)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Staff Client
+    participant Ctrl as StaffController
+    participant Guard as AuthGuard
+    participant Service as StaffService
+    participant StaffModel as StaffInfoModel (TypeORM Repository)
+    participant DB as Database (SQL Server)
+
+    note right of Client: PATCH /staff/me (with Bearer Token)
+    Client->>Ctrl: UpdateMyProfileDto (fullName?, phone?, address?, birthDate?)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT & attach user (sub = accountId) to request
+    alt JWT invalid / expired
+        Guard-->>Client: Throw UnauthorizedException
+    else JWT valid
+        Guard-->>Ctrl: return true
+    end
+
+    Ctrl->>Service: updateMyProfile(req.user.sub, dto)
+    activate Service
+    Service->>StaffModel: findOne({ where: { accountId } })
+    StaffModel->>DB: SELECT * FROM StaffInfo WHERE AccountId = ?
+    DB-->>StaffModel: row / null
+    StaffModel-->>Service: StaffInfo Entity / null
+    opt Staff not found
+        Service-->>Client: Throw NotFoundException
+    end
+
+    Note over Service: Apply partial field updates from dto
+
+    Service->>StaffModel: save(staffInfo)
+    StaffModel->>DB: UPDATE StaffInfo SET FullName=?, Phone=?, Address=?, BirthDate=? WHERE AccountId = ?
+    DB-->>StaffModel: updated row
+    StaffModel-->>Service: Updated StaffInfo Entity
+    Service-->>Ctrl: Updated StaffInfo Entity
+    deactivate Service
+
+    Ctrl-->>Client: HTTP 200 - { staff: StaffInfo }
+    deactivate Ctrl

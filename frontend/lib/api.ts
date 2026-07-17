@@ -24,3 +24,78 @@ export async function apiRequest<T = unknown>(
   }
   return data as T;
 }
+
+// ---- Profile helpers ----
+
+export interface CustomerProfile {
+  customerId: string;
+  accountId: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  createdAt: string;
+}
+
+export interface StaffProfile {
+  staffId: string;
+  accountId: string;
+  cccd: string;
+  fullName: string;
+  birthDate?: string | null;
+  phone?: string;
+  address?: string;
+}
+
+export interface UpdateCustomerProfile {
+  fullName?: string;
+  avatar?: string;
+}
+
+export interface UpdateStaffProfile {
+  fullName?: string;
+  phone?: string;
+  address?: string;
+  birthDate?: string;
+}
+
+export const STAFF_ROLES = [
+  "Manager",
+  "Receptionist",
+  "Saler",
+  "Cleaner",
+  "Maintainer",
+] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export const isStaffRole = (role: string): role is StaffRole =>
+  (STAFF_ROLES as readonly string[]).includes(role);
+
+export function getCustomerProfile() {
+  return apiRequest<CustomerProfile>("/customers/profile");
+}
+
+export function updateCustomerProfile(dto: UpdateCustomerProfile) {
+  return apiRequest<CustomerProfile>("/customers/profile", {
+    method: "PUT",
+    body: JSON.stringify(dto),
+  });
+}
+
+export function getMyStaffProfile() {
+  return apiRequest<{ staff: StaffProfile }>("/staff/me").then((r) => r.staff);
+}
+
+export function updateMyStaffProfile(dto: UpdateStaffProfile) {
+  return apiRequest<{ staff: StaffProfile }>("/staff/me", {
+    method: "PATCH",
+    body: JSON.stringify(dto),
+  });
+}
+
+export function changePassword(oldPassword: string, newPassword: string) {
+  return apiRequest<{ message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ oldPassword, newPassword }),
+  });
+}

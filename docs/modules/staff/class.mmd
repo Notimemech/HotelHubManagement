@@ -10,28 +10,45 @@ classDiagram
         <<Controller>>
         -staffService: StaffService
         +register(dto: RegisterStaffDto) Promise~StaffInfo~
-        +getMyProfile(req: AuthRequest) Promise~StaffInfo~
-        +assignRole(staffId: number, roleName: string) Promise~void~
+        +findAll() Promise~StaffListItemDto[]~
+        +me(req: any) Promise~MyProfileDto~
+        +updateMe(req: any, dto: UpdateMyProfileDto) Promise~MyProfileDto~
+        +findOne(id: string) Promise~StaffListItemDto~
+        +update(id: string, dto: UpdateStaffDto) Promise~StaffInfo~
+        +changeRole(id: string, dto: ChangeRoleDto) Promise~void~
     }
 
     class StaffService {
         <<Service>>
-        -staffInfoRepo: Repository~StaffInfo~
+        -staffRepo: Repository~StaffInfo~
         -accountRepo: Repository~Account~
-        -roleRepo: Repository~Role~
-        -accountRoleRepo: Repository~AccountRole~
+        -dataSource: DataSource
         +createStaff(dto: RegisterStaffDto) Promise~StaffInfo~
-        +findByAccountId(accountId: number) Promise~StaffInfo~
-        +assignRole(accountId: number, roleName: string) Promise~void~
+        +findAll() Promise~StaffListItemDto[]~
+        +findOne(id: string) Promise~StaffListItemDto~
+        +findByAccountId(accountId: string) Promise~StaffInfo | null~
+        +updateStaff(id: string, dto: UpdateStaffDto) Promise~StaffInfo~
+        +updateMyProfile(accountId: string, dto: UpdateMyProfileDto) Promise~StaffInfo~
+        +changeRole(id: string, roleName: string) Promise~void~
+    }
+
+    class AuthGuard {
+        <<Guard>>
     }
 
     class RolesGuard {
         <<Guard>>
-        +canActivate(ctx: ExecutionContext) boolean
+        -reflector: Reflector
+        +canActivate(context: ExecutionContext) boolean
+    }
+
+    class Roles {
+        <<Decorator>>
+        +Roles(...roles: string[]) MethodDecorator
     }
 
     class RegisterStaffDto {
-        <<DTO>>
+        <<DTO Input>>
         +username: string
         +password: string
         +fullName: string
@@ -42,8 +59,87 @@ classDiagram
         +role: string
     }
 
+    class UpdateStaffDto {
+        <<DTO Input>>
+        +fullName?: string
+        +phone?: string
+        +address?: string
+        +birthDate?: string
+        +isActive?: boolean
+        +password?: string
+    }
+
+    class UpdateMyProfileDto {
+        <<DTO Input>>
+        +fullName?: string
+        +phone?: string
+        +address?: string
+        +birthDate?: string
+    }
+
+    class ChangeRoleDto {
+        <<DTO Input>>
+        +roleName: string
+    }
+
+    class ROLES {
+        <<Constant>>
+        +Admin
+        +Manager
+        +Receptionist
+        +Saler
+        +Cleaner
+        +Maintainer
+        +User
+    }
+
+    class StaffListItemDto {
+        <<DTO Output>>
+        +staffId: string
+        +accountId: string
+        +cccd: string
+        +fullName: string
+        +phone: string
+        +address: string
+        +birthDate: Date
+        +username: string
+        +isActive: boolean
+        +createdAt: Date
+        +role: string
+    }
+
+    class MyProfileDto {
+        <<DTO Output>>
+        +staff: StaffInfo
+    }
+
+    class StaffInfo {
+        <<Entity>>
+        +staffId: string
+        +accountId: string
+        +cccd: string
+        +fullName: string
+        +birthDate: Date | null
+        +phone: string
+        +address: string
+        +account: Account
+        +versionsInCharge: BookingVersion[]
+        +checklistLogs: ChecklistLog[]
+        +reportedIssues: IssueReport[]
+        +maintenanceProves: MaintenanceProve[]
+    }
+
     StaffModule --> StaffController
     StaffModule --> StaffService
     StaffController --> StaffService
-    StaffController ..> RolesGuard : protects
+    StaffController ..> AuthGuard : protects all routes
+    StaffController ..> RolesGuard : enforces Manager role
+    StaffController ..> Roles : declares Manager
     StaffService ..> RegisterStaffDto : consumes
+    StaffService ..> UpdateStaffDto : consumes
+    StaffService ..> UpdateMyProfileDto : consumes
+    StaffService ..> ChangeRoleDto : consumes
+    StaffService ..> ROLES : validates roleName
+    StaffService ..> StaffInfo : manages
+    StaffService ..> Account : manages (via DataSource transaction)
+    RolesGuard ..> Roles : resolves metadata

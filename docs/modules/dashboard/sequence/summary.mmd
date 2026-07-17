@@ -1,0 +1,88 @@
+---
+title: Dashboard - Get Summary Flow (GET /dashboard/summary)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Manager / Receptionist Client
+    participant Ctrl as DashboardController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Service as DashboardService
+    participant BookingModel as BookingModel (TypeORM Repository)
+    participant VersionModel as BookingVersionModel (TypeORM Repository)
+    participant PaymentModel as PaymentModel (TypeORM Repository)
+    participant RoomModel as RoomModel (TypeORM Repository)
+    participant DB as Database (SQL Server)
+
+    note right of Client: GET /dashboard/summary?from=YYYY-MM-DD&to=YYYY-MM-DD (with Bearer Token)
+    Client->>Ctrl: DashboardSummaryFilterDto (from?, to?)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT
+    Guard-->>Ctrl: Attach user to request & return true
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve metadata @Roles('Manager', 'Receptionist')
+    RGuard-->>Ctrl: return true
+
+    Ctrl->>Service: getSummary(from, to)
+    activate Service
+
+    Note over Service: Compute date range:<br/>toDate = to ?? new Date()<br/>fromDate = from ?? toDate - 30 days
+
+    rect rgb(54, 50, 50)
+        Note over Service, DB: 1. totalBookings (count in range)
+        Service->>BookingModel: count({ bookingDate: Between(from, to) })
+        BookingModel->>DB: SELECT COUNT(*) FROM Bookings WHERE BookingDate BETWEEN ? AND ?
+        DB-->>BookingModel: totalBookings
+        BookingModel-->>Service: totalBookings
+    end
+
+    rect rgb(54, 50, 50)
+        Note over Service, DB: 2. totalRevenue (SUM payments where Status='Paid' in range)
+        Service->>PaymentModel: createQueryBuilder('p').select('SUM(p.Amount)').where("Status = 'Paid'").andWhere('PaidAt BETWEEN :from AND :to')
+        PaymentModel->>DB: SELECT SUM(Amount) FROM Payments WHERE Status = 'Paid' AND PaidAt BETWEEN ? AND ?
+        DB-->>PaymentModel: raw.total (string|null)
+        PaymentModel-->>Service: totalRevenue (number)
+    end
+
+    rect rgb(54, 50, 50)
+        Note over Service, DB: 3. occupancyRate
+        Service->>RoomModel: count()
+        RoomModel->>DB: SELECT COUNT(*) FROM Rooms
+        DB-->>RoomModel: totalRooms
+        RoomModel-->>Service: totalRooms
+        Service->>RoomModel: count({ status: 'Occupied' })
+        RoomModel->>DB: SELECT COUNT(*) FROM Rooms WHERE Status = 'Occupied'
+        DB-->>RoomModel: occupiedRooms
+        RoomModel-->>Service: occupiedRooms
+        Service->>Service: occupancyRate = totalRooms > 0 ? occupiedRooms / totalRooms : 0
+    end
+
+    rect rgb(54, 50, 50)
+        Note over Service, DB: 4. topRoomTypes (top 5)
+        Service->>VersionModel: createQueryBuilder('v') innerJoin Booking, BookingDetail, Room, RoomType groupBy TypeName limit 5
+        VersionModel->>DB: SELECT TOP 5 rt.TypeName, COUNT(DISTINCT b.BookingId) AS bookings FROM BookingVersions v ... GROUP BY rt.TypeName ORDER BY bookings DESC
+        DB-->>VersionModel: rows [{ typeName, bookings }]
+        VersionModel-->>Service: topRoomTypes[]
+    end
+
+    rect rgb(54, 50, 50)
+        Note over Service, DB: 5. bookingsByDay (chart data)
+        Service->>BookingModel: createQueryBuilder('b').select date + count groupBy date
+        BookingModel->>DB: SELECT CONVERT(varchar(10), BookingDate, 120) AS date, COUNT(BookingId) AS count FROM Bookings WHERE BookingDate BETWEEN ? AND ? GROUP BY date ORDER BY date ASC
+        DB-->>BookingModel: rows [{ date, count }]
+        BookingModel-->>Service: bookingsByDay[]
+    end
+
+    rect rgb(54, 50, 50)
+        Note over Service, DB: 6. recentBookings (last 5)
+        Service->>BookingModel: find({ order: BookingDate DESC, take: 5, relations: customer, versions })
+        BookingModel->>DB: SELECT TOP 5 * FROM Bookings ORDER BY BookingDate DESC
+        DB-->>BookingModel: bookings[]
+        BookingModel-->>Service: recentBookings[]
+    end
+
+    Service-->>Ctrl: SummaryDto { totalBookings, totalRevenue, occupancyRate, topRoomTypes, bookingsByDay, recentBookings }
+    deactivate Service
+    Ctrl-->>Client: HTTP 200 - SummaryDto
+    deactivate Ctrl

@@ -13,6 +13,8 @@ import {
   walkInBooking,
   type Booking,
 } from "@/lib/admin-api";
+import { useAuth } from "@/lib/auth-context";
+import { SaleBookingModal } from "./_components/SaleBookingModal";
 
 const VND = new Intl.NumberFormat("vi-VN");
 const STATUS_COLORS: Record<string, string> = {
@@ -28,6 +30,8 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: "", from: "", to: "", q: "" });
   const [showWalkIn, setShowWalkIn] = useState(false);
+  const [showSaleBooking, setShowSaleBooking] = useState(false);
+  const { user } = useAuth();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,12 +48,22 @@ export default function BookingsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-zinc-900">Quản lý đặt phòng</h1>
-        <button
-          onClick={() => setShowWalkIn(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Walk-in
-        </button>
+        <div className="flex items-center gap-2">
+          {user?.role === "Saler" && (
+            <button
+              onClick={() => setShowSaleBooking(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Tạo booking hộ khách
+            </button>
+          )}
+          <button
+            onClick={() => setShowWalkIn(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Walk-in
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-zinc-200 p-4 flex flex-wrap gap-3 items-end">
@@ -152,6 +166,16 @@ export default function BookingsPage() {
 
       {showWalkIn && (
         <WalkInModal onClose={() => setShowWalkIn(false)} onCreated={() => { setShowWalkIn(false); load(); }} />
+      )}
+      {showSaleBooking && (
+        <SaleBookingModal
+          open={showSaleBooking}
+          onClose={() => setShowSaleBooking(false)}
+          onCreated={() => {
+            setShowSaleBooking(false);
+            load();
+          }}
+        />
       )}
     </div>
   );
