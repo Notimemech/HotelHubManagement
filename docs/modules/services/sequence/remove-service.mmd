@@ -7,12 +7,12 @@ sequenceDiagram
     participant Ctrl as ServicesController
     participant Guard as AuthGuard
     participant RGuard as RolesGuard
-    participant Service as ServicesService
+    participant Svc as ServicesService
     participant ServiceRepo as ServiceRepo (TypeORM)
     participant BookingServiceRepo as BookingServiceRepo (TypeORM)
     participant DB as Database (SQL Server)
 
-    note right of Client: DELETE /services/:id (with Bearer Token, role=Manager)
+    Note right of Client: DELETE /services/:id (with Bearer Token, role=Manager)
     Client->>Ctrl: path :id (serviceId)
     activate Ctrl
     Ctrl->>Guard: canActivate(context)
@@ -24,30 +24,30 @@ sequenceDiagram
     end
     RGuard-->>Ctrl: return true
 
-    Ctrl->>Service: remove(id)
-    activate Service
-    Service->>ServiceRepo: findOne({ where: { serviceId: id } })
+    Ctrl->>Svc: remove(id)
+    activate Svc
+    Svc->>ServiceRepo: findOne({ where: { serviceId: id } })
     ServiceRepo->>DB: SELECT * FROM Services WHERE ServiceId = ?
     DB-->>ServiceRepo: row / null
-    ServiceRepo-->>Service: Service / null
-    opt Service not found
-        Service-->>Client: Throw NotFoundException
+    ServiceRepo-->>Svc: ServiceEntity / null
+    opt ServiceEntity not found
+        Svc-->>Client: Throw NotFoundException
     end
 
-    Service->>BookingServiceRepo: count({ where: { serviceId: id } })
+    Svc->>BookingServiceRepo: count({ where: { serviceId: id } })
     BookingServiceRepo->>DB: SELECT COUNT(*) FROM BookingServices WHERE ServiceId = ?
     DB-->>BookingServiceRepo: refCount
-    BookingServiceRepo-->>Service: refCount
+    BookingServiceRepo-->>Svc: refCount
     alt refCount > 0
-        Service-->>Client: Throw ConflictException (Cannot delete, N booking reference(s) exist)
+        Svc-->>Client: Throw ConflictException (Cannot delete, N booking reference(s) exist)
     end
 
-    Service->>ServiceRepo: remove(svc)
+    Svc->>ServiceRepo: remove(svc)
     ServiceRepo->>DB: DELETE FROM Services WHERE ServiceId = ?
     DB-->>ServiceRepo: ok
 
-    Service-->>Ctrl: { message: 'Service deleted' }
-    deactivate Service
+    Svc-->>Ctrl: { message: 'Service deleted' }
+    deactivate Svc
 
     Ctrl-->>Client: HTTP 200 - { message: 'Service deleted' }
     deactivate Ctrl

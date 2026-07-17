@@ -7,11 +7,11 @@ sequenceDiagram
     participant Ctrl as ServicesController
     participant Guard as AuthGuard
     participant RGuard as RolesGuard
-    participant Service as ServicesService
+    participant Svc as ServicesService
     participant ServiceRepo as ServiceRepo (TypeORM)
     participant DB as Database (SQL Server)
 
-    note right of Client: PATCH /services/:id (with Bearer Token, role=Manager)
+    Note right of Client: PATCH /services/:id (with Bearer Token, role=Manager)
     Client->>Ctrl: UpdateServiceDto (serviceName?, price?) + path :id
     activate Ctrl
     Ctrl->>Guard: canActivate(context)
@@ -23,24 +23,24 @@ sequenceDiagram
     end
     RGuard-->>Ctrl: return true
 
-    Ctrl->>Service: update(id, dto)
-    activate Service
-    Service->>ServiceRepo: findOne({ where: { serviceId: id } })
+    Ctrl->>Svc: update(id, dto)
+    activate Svc
+    Svc->>ServiceRepo: findOne({ where: { serviceId: id } })
     ServiceRepo->>DB: SELECT * FROM Services WHERE ServiceId = ?
     DB-->>ServiceRepo: row / null
-    ServiceRepo-->>Service: Service / null
-    opt Service not found
-        Service-->>Client: Throw NotFoundException
+    ServiceRepo-->>Svc: ServiceEntity / null
+    opt ServiceEntity not found
+        Svc-->>Client: Throw NotFoundException
     end
 
-    Note over Service: Apply partial field updates from dto via Object.assign
+    Note over Svc: Apply partial field updates from dto via Object.assign
 
-    Service->>ServiceRepo: save(service)
+    Svc->>ServiceRepo: save(svc)
     ServiceRepo->>DB: UPDATE Services SET ServiceName=?, Price=? WHERE ServiceId = ?
     DB-->>ServiceRepo: updated row
-    ServiceRepo-->>Service: Updated Service
-    Service-->>Ctrl: Updated Service
-    deactivate Service
+    ServiceRepo-->>Svc: Updated ServiceEntity
+    Svc-->>Ctrl: Updated ServiceEntity
+    deactivate Svc
 
-    Ctrl-->>Client: HTTP 200 - Updated Service
+    Ctrl-->>Client: HTTP 200 - Updated ServiceEntity
     deactivate Ctrl

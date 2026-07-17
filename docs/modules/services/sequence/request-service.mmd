@@ -7,13 +7,13 @@ sequenceDiagram
     participant Ctrl as ServicesController
     participant Guard as AuthGuard
     participant RGuard as RolesGuard
-    participant Service as ServicesService
+    participant Svc as ServicesService
     participant BookingRepo as BookingRepo (TypeORM)
     participant ServiceRepo as ServiceRepo (TypeORM)
     participant BookingServiceRepo as BookingServiceRepo (TypeORM)
     participant DB as Database (SQL Server)
 
-    note right of Client: POST /services/request (with Bearer Token, role in [User, Manager, Receptionist])
+    Note right of Client: POST /services/request (with Bearer Token, role in [User, Manager, Receptionist])
     Client->>Ctrl: RequestServiceDto (bookingId, serviceId, quantity)
     activate Ctrl
     Ctrl->>Guard: canActivate(context)
@@ -31,40 +31,40 @@ sequenceDiagram
     end
     RGuard-->>Ctrl: return true
 
-    Ctrl->>Service: requestService(req.user.sub, dto)
-    activate Service
+    Ctrl->>Svc: requestService(req.user.sub, dto)
+    activate Svc
 
-    Service->>BookingRepo: findOne({ where: { bookingId }, relations: { customer: true } })
+    Svc->>BookingRepo: findOne({ where: { bookingId }, relations: { customer: true } })
     BookingRepo->>DB: SELECT b.*, c.AccountId FROM Bookings b JOIN Customers c ON b.CustomerId = c.CustomerId WHERE b.BookingId = ?
-    DB-->>BookingRepo: Booking with customer / null
-    BookingRepo-->>Service: Booking / null
+    DB-->>BookingRepo: BookingEntity with customer / null
+    BookingRepo-->>Svc: BookingEntity / null
 
     alt Booking not found OR booking.customer.accountId !== accountId
-        Service-->>Client: Throw NotFoundException (Booking not found)
+        Svc-->>Client: Throw NotFoundException (Booking not found)
     end
 
-    Service->>ServiceRepo: findOne({ where: { serviceId: dto.serviceId } })
+    Svc->>ServiceRepo: findOne({ where: { serviceId: dto.serviceId } })
     ServiceRepo->>DB: SELECT * FROM Services WHERE ServiceId = ?
     DB-->>ServiceRepo: row / null
-    ServiceRepo-->>Service: Service / null
-    opt Service not found
-        Service-->>Client: Throw NotFoundException (Service not found)
+    ServiceRepo-->>Svc: ServiceEntity / null
+    opt ServiceEntity not found
+        Svc-->>Client: Throw NotFoundException (Service not found)
     end
 
-    Service->>BookingServiceRepo: create({ bookingId, serviceId, quantity })
-    Service->>BookingServiceRepo: save(bookingService)
-    BookingServiceRepo->>DB: INSERT INTO BookingServices (BookingId, ServiceId, Quantity) ...
-    DB-->>BookingServiceRepo: persisted BookingService
-    BookingServiceRepo-->>Service: BookingService Entity
+    Svc->>BookingServiceRepo: create({ bookingId, serviceId, quantity })
+    Svc->>BookingServiceRepo: save(bookingService)
+    BookingServiceRepo->>DB: INSERT INTO BookingServices (BookingId, ServiceId, Quantity)
+    DB-->>BookingServiceRepo: persisted BookingServiceEntity
+    BookingServiceRepo-->>Svc: BookingServiceEntity
 
-    Note over Service, BookingRepo: Update booking totalPrice = totalPrice + service.price * quantity
+    Note over Svc,BookingRepo: Update booking totalPrice = totalPrice + service.price * quantity
 
-    Service->>BookingRepo: save(booking with new totalPrice)
+    Svc->>BookingRepo: save(booking with new totalPrice)
     BookingRepo->>DB: UPDATE Bookings SET TotalPrice = ? WHERE BookingId = ?
     DB-->>BookingRepo: ok
 
-    Service-->>Ctrl: { message: 'Service requested successfully', totalPrice }
-    deactivate Service
+    Svc-->>Ctrl: { message: 'Service requested successfully', totalPrice }
+    deactivate Svc
 
     Ctrl-->>Client: HTTP 201 - { message, totalPrice }
     deactivate Ctrl
