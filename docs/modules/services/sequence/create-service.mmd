@@ -7,11 +7,11 @@ sequenceDiagram
     participant Ctrl as ServicesController
     participant Guard as AuthGuard
     participant RGuard as RolesGuard
-    participant Service as ServicesService
+    participant Svc as ServicesService
     participant ServiceRepo as ServiceRepo (TypeORM)
     participant DB as Database (SQL Server)
 
-    note right of Client: POST /services (with Bearer Token, role=Manager)
+    Note right of Client: POST /services (with Bearer Token, role=Manager)
     Client->>Ctrl: CreateServiceDto (serviceName, price)
     activate Ctrl
     Ctrl->>Guard: canActivate(context)
@@ -30,15 +30,15 @@ sequenceDiagram
         RGuard-->>Ctrl: return true
     end
 
-    Ctrl->>Service: create(dto)
-    activate Service
-    Service->>ServiceRepo: create(dto)
-    Service->>ServiceRepo: save(new Service)
-    ServiceRepo->>DB: INSERT INTO Services (ServiceName, Price) ...
-    DB-->>ServiceRepo: persisted Service
-    ServiceRepo-->>Service: Service Entity
-    Service-->>Ctrl: Service Entity
-    deactivate Service
+    Ctrl->>Svc: create(dto)
+    activate Svc
+    Svc->>ServiceRepo: create(dto)
+    Svc->>ServiceRepo: save(entity)
+    ServiceRepo->>DB: INSERT INTO Services (ServiceName, Price)
+    DB-->>ServiceRepo: persisted ServiceEntity
+    ServiceRepo-->>Svc: ServiceEntity
+    Svc-->>Ctrl: ServiceEntity
+    deactivate Svc
 
-    Ctrl-->>Client: HTTP 201 - Service Entity
+    Ctrl-->>Client: HTTP 201 - ServiceEntity
     deactivate Ctrl
