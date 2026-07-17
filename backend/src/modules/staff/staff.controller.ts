@@ -12,6 +12,7 @@ import { StaffService } from './staff.service';
 import { RegisterStaffDto } from './dto/register-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { ChangeRoleDto } from './dto/change-role.dto';
+import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -41,6 +42,13 @@ export class StaffController {
   @Get('me')
   async me(@Request() req) {
     const profile = await this.staffService.findByAccountId(req.user.sub);
+    return { staff: profile };
+  }
+
+  /** Staff: update own profile — must be before :id to avoid capture */
+  @Patch('me')
+  async updateMe(@Request() req, @Body() dto: UpdateMyProfileDto) {
+    const profile = await this.staffService.updateMyProfile(req.user.sub, dto);
     return { staff: profile };
   }
 

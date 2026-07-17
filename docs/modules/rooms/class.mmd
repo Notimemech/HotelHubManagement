@@ -9,44 +9,139 @@ classDiagram
     class RoomsController {
         <<Controller>>
         -roomsService: RoomsService
-        +checkAvailability(checkIn: string, checkOut: string, guests: number) Promise~Room[]~
+        +checkAvailability(checkIn: string, checkOut: string, guests: string) Promise~Room[]~
         +findAll() Promise~Room[]~
-        +findOne(id: number) Promise~Room~
+        +findOne(id: string) Promise~Room~
         +create(dto: CreateRoomDto) Promise~Room~
-        +update(id: number, dto: UpdateRoomDto) Promise~Room~
-        +remove(id: number) Promise~void~
+        +update(id: string, dto: UpdateRoomDto) Promise~Room~
+        +setStatus(id: string, status: string) Promise~Room~
+        +remove(id: string) Promise~DeleteMessageDto~
+    }
+
+    class RoomTypesController {
+        <<Controller>>
+        -roomTypesService: RoomTypesService
+        +findAll() Promise~RoomType[]~
+        +create(dto: CreateRoomTypeDto) Promise~RoomType~
+        +update(id: string, dto: UpdateRoomTypeDto) Promise~RoomType~
+        +remove(id: string) Promise~DeleteMessageDto~
     }
 
     class RoomsService {
         <<Service>>
         -roomRepo: Repository~Room~
         -roomTypeRepo: Repository~RoomType~
+        -detailRepo: Repository~BookingDetail~
+        -versionRepo: Repository~BookingVersion~
+        -bookingRepo: Repository~Booking~
         +findAll() Promise~Room[]~
-        +findOne(id: number) Promise~Room~
-        +create(dto: CreateRoomDto) Promise~Room~
-        +update(id: number, dto: UpdateRoomDto) Promise~Room~
-        +remove(id: number) Promise~void~
-        +checkAvailability(checkIn: string, checkOut: string, guests: number) Promise~Room[]~
+        +findOne(id: string) Promise~Room~
+        +create(dto: Partial~Room~) Promise~Room~
+        +update(id: string, dto: Partial~Room~) Promise~Room~
+        +setStatus(id: string, status: string) Promise~Room~
+        +remove(id: string) Promise~DeleteMessageDto~
+        +checkAvailability(checkIn: string, checkOut: string, guests: number | undefined) Promise~Room[]~
+    }
+
+    class RoomTypesService {
+        <<Service>>
+        -typeRepo: Repository~RoomType~
+        -roomRepo: Repository~Room~
+        +findAll() Promise~RoomType[]~
+        +create(dto: CreateRoomTypeDto) Promise~RoomType~
+        +update(id: string, dto: UpdateRoomTypeDto) Promise~RoomType~
+        +remove(id: string) Promise~DeleteMessageDto~
+    }
+
+    class AuthGuard {
+        <<Guard>>
+    }
+
+    class RolesGuard {
+        <<Guard>>
+        -reflector: Reflector
+        +canActivate(context: ExecutionContext) boolean
+    }
+
+    class Roles {
+        <<Decorator>>
+        +Roles(...roles: string[]) MethodDecorator
     }
 
     class CreateRoomDto {
-        <<DTO>>
+        <<DTO Input>>
         +roomCode: string
-        +typeId: number
+        +typeId: string
         +floor?: number
         +status: string
     }
 
     class UpdateRoomDto {
-        <<DTO>>
+        <<DTO Input>>
         +roomCode?: string
-        +typeId?: number
+        +typeId?: string
         +floor?: number
         +status?: string
     }
 
+    class CreateRoomTypeDto {
+        <<DTO Input>>
+        +typeName: string
+        +price: number
+        +maxGuests?: number
+        +description?: string
+    }
+
+    class UpdateRoomTypeDto {
+        <<DTO Input>>
+        +typeName?: string
+        +price?: number
+        +maxGuests?: number
+        +description?: string
+    }
+
+    class DeleteMessageDto {
+        <<DTO Output>>
+        +message: string
+    }
+
+    class Room {
+        <<Entity>>
+        +roomId: string
+        +roomCode: string
+        +typeId: string
+        +floor: number | null
+        +status: string
+        +roomType: RoomType
+    }
+
+    class RoomType {
+        <<Entity>>
+        +typeId: string
+        +typeName: string
+        +price: number
+        +maxGuests: number | null
+        +description: string | null
+    }
+
     RoomsModule --> RoomsController
+    RoomsModule --> RoomTypesController
     RoomsModule --> RoomsService
+    RoomsModule --> RoomTypesService
     RoomsController --> RoomsService
+    RoomTypesController --> RoomTypesService
+    RoomsController ..> AuthGuard : protects write routes
+    RoomsController ..> RolesGuard : enforces Manager role
+    RoomTypesController ..> AuthGuard : protects write routes
+    RoomTypesController ..> RolesGuard : enforces Manager role
+    RoomsController ..> Roles : declares Manager / Receptionist
+    RoomTypesController ..> Roles : declares Manager
     RoomsService ..> CreateRoomDto : consumes
     RoomsService ..> UpdateRoomDto : consumes
+    RoomTypesService ..> CreateRoomTypeDto : consumes
+    RoomTypesService ..> UpdateRoomTypeDto : consumes
+    RoomsService ..> Room : manages
+    RoomsService ..> RoomType : reads (for validation)
+    RoomTypesService ..> RoomType : manages
+    RoomTypesService ..> Room : checks references before delete
+    RolesGuard ..> Roles : resolves metadata

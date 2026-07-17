@@ -1,0 +1,24 @@
+---
+title: Services - Get All Services Flow (GET /services)
+---
+sequenceDiagram
+    autonumber
+    actor Client as User Client
+    participant Ctrl as ServicesController
+    participant Service as ServicesService
+    participant ServiceRepo as ServiceRepo (TypeORM)
+    participant DB as Database (SQL Server)
+
+    note right of Client: GET /services (no auth required)
+    Client->>Ctrl: (no body)
+    activate Ctrl
+    Ctrl->>Service: findAll()
+    activate Service
+    Service->>ServiceRepo: find()
+    ServiceRepo->>DB: SELECT * FROM Services
+    DB-->>ServiceRepo: rows
+    ServiceRepo-->>Service: Service[]
+    Service-->>Ctrl: Service[]
+    deactivate Service
+    Ctrl-->>Client: HTTP 200 - Service[]
+    deactivate Ctrl

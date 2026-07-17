@@ -1,0 +1,84 @@
+---
+title: Staff - Manager Update Staff Flow (PATCH /staff/:id)
+---
+sequenceDiagram
+    autonumber
+    actor Client as Manager Client
+    participant Ctrl as StaffController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Service as StaffService
+    participant StaffModel as StaffInfoModel (TypeORM Repository)
+    participant AccountModel as AccountModel (TypeORM Repository)
+    participant Util as Security Utils (bcrypt)
+    participant DB as Database (SQL Server)
+
+    note right of Client: PATCH /staff/:id (with Bearer Token, role=Manager)
+    Client->>Ctrl: UpdateStaffDto (fullName?, phone?, address?, birthDate?, isActive?, password?) + path :id
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT & attach user to request
+    alt JWT invalid / expired
+        Guard-->>Client: Throw UnauthorizedException
+    else JWT valid
+        Guard-->>Ctrl: return true
+    end
+
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve metadata @Roles('Manager')
+    alt Not Manager
+        RGuard-->>Client: Throw ForbiddenException
+    else Manager
+        RGuard-->>Ctrl: return true
+    end
+
+    Ctrl->>Service: updateStaff(id, dto)
+    activate Service
+    Service->>StaffModel: findOne({ where: { staffId: id }, relations: { account: true } })
+    StaffModel->>DB: SELECT s.*, a.* FROM StaffInfo s JOIN Accounts a ON s.AccountId = a.AccountId WHERE s.StaffId = ?
+    DB-->>StaffModel: row / null
+    StaffModel-->>Service: StaffInfo with account / null
+    opt Staff not found
+        Service-->>Client: Throw NotFoundException
+    end
+
+    Note over Service, DB: Run inside Transaction (dataSource.transaction)
+
+    Note over Service: Apply partial field updates from dto to staff
+
+    alt dto.fullName !== undefined
+        Service->>Service: staff.fullName = dto.fullName
+    end
+    alt dto.phone !== undefined
+        Service->>Service: staff.phone = dto.phone
+    end
+    alt dto.address !== undefined
+        Service->>Service: staff.address = dto.address
+    end
+    alt dto.birthDate !== undefined
+        Service->>Service: staff.birthDate = dto.birthDate ? new Date(dto.birthDate) : null
+    end
+
+    alt staff.account exists
+        alt dto.isActive !== undefined
+            Service->>Service: account.isActive = dto.isActive
+        end
+        alt dto.password !== undefined
+            Service->>Util: bcrypt.hash(dto.password, 10)
+            Util-->>Service: newHash
+            Service->>Service: account.password = newHash
+        end
+        Service->>AccountModel: save(account)
+        AccountModel->>DB: UPDATE Accounts SET IsActive=?, Password=? WHERE AccountId = ?
+        DB-->>AccountModel: ok
+    end
+
+    Service->>StaffModel: save(staff)
+    StaffModel->>DB: UPDATE StaffInfo SET FullName=?, Phone=?, Address=?, BirthDate=? WHERE StaffId = ?
+    DB-->>StaffModel: updated row
+    StaffModel-->>Service: Updated StaffInfo Entity
+    Service-->>Ctrl: Updated StaffInfo Entity
+    deactivate Service
+
+    Ctrl-->>Client: HTTP 200 - StaffInfo Entity
+    deactivate Ctrl

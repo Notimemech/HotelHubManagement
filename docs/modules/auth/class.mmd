@@ -9,53 +9,113 @@ classDiagram
     class AuthController {
         <<Controller>>
         -authService: AuthService
-        +register(dto: RegisterDto) Promise~AuthResult~
-        +login(dto: LoginDto) Promise~AuthResult~
-        +logout() Promise~void~
-        +changePassword(req: AuthRequest, dto: ChangePasswordDto) Promise~void~
+        +register(dto: RegisterDto) Promise~RegisterResponseDto~
+        +login(dto: LoginDto) Promise~TokenPairDto~
+        +refresh(dto: RefreshTokenDto) Promise~TokenPairDto~
+        +logout(dto: RefreshTokenDto) Promise~MessageResponseDto~
+        +changePassword(req: any, dto: ChangePasswordDto) Promise~MessageResponseDto~
     }
 
     class AuthService {
         <<Service>>
+        -accountRepo: Repository~Account~
         -customerRepo: Repository~Customer~
-        -jwt: JwtService
-        +register(dto: RegisterDto) Promise~AuthResult~
-        +login(dto: LoginDto) Promise~AuthResult~
-        +logout() Promise~void~
-        +changePassword(customerId: number, dto: ChangePasswordDto) Promise~void~
+        -refreshTokenRepo: Repository~RefreshToken~
+        -accountsService: AccountsService
+        -jwtService: JwtService
+        +hashToken(token: string) string
+        +generateRefreshToken() string
+        +signAccessToken(account: Account, role: string) Promise~string~
+        +register(dto: RegisterDto) Promise~RegisterResponseDto~
+        +login(dto: LoginDto) Promise~TokenPairDto~
+        +refreshToken(dto: RefreshTokenDto) Promise~TokenPairDto~
+        +logout(dto: RefreshTokenDto) Promise~MessageResponseDto~
+        +changePassword(accountId: string, dto: ChangePasswordDto) Promise~MessageResponseDto~
     }
 
     class AuthGuard {
         <<Guard>>
-        -jwt: JwtService
-        +canActivate(ctx: ExecutionContext) boolean
+        -jwtService: JwtService
+        +canActivate(context: ExecutionContext) Promise~boolean~
+        -extractTokenFromHeader(request: any) string|undefined
+    }
+
+    class RolesGuard {
+        <<Guard>>
+        -reflector: Reflector
+        +canActivate(context: ExecutionContext) boolean
+    }
+
+    class Roles {
+        <<Decorator>>
+        +Roles(...roles: string[]) MethodDecorator
     }
 
     class RegisterDto {
-        <<DTO>>
+        <<DTO Input>>
+        +username: string
         +fullName: string
         +email?: string
-        +phone: string
+        +phone?: string
         +password: string
     }
 
     class LoginDto {
-        <<DTO>>
-        +phone: string
+        <<DTO Input>>
+        +username: string
         +password: string
     }
 
+    class RefreshTokenDto {
+        <<DTO Input>>
+        +refreshToken: string
+    }
+
     class ChangePasswordDto {
-        <<DTO>>
+        <<DTO Input>>
         +oldPassword: string
         +newPassword: string
+    }
+
+    class TokenPairDto {
+        <<DTO Output>>
+        +accessToken: string
+        +refreshToken: string
+    }
+
+    class RegisterResponseDto {
+        <<DTO Output>>
+        +message: string
+        +customerId: string
+    }
+
+    class MessageResponseDto {
+        <<DTO Output>>
+        +message: string
+    }
+
+    class RefreshToken {
+        <<Entity>>
+        +id: string
+        +accountId: string
+        +tokenHash: string
+        +expiresAt: Date
+        +createdAt: Date
     }
 
     AuthModule --> AuthController
     AuthModule --> AuthService
     AuthModule --> AuthGuard
+    AuthModule --> RolesGuard
     AuthController --> AuthService
     AuthController ..> AuthGuard : protects changePassword
+    AuthController ..> RolesGuard : enforces roles metadata
     AuthService ..> RegisterDto : consumes
     AuthService ..> LoginDto : consumes
+    AuthService ..> RefreshTokenDto : consumes
     AuthService ..> ChangePasswordDto : consumes
+    AuthService ..> TokenPairDto : returns
+    AuthService ..> RegisterResponseDto : returns
+    AuthService ..> MessageResponseDto : returns
+    AuthService ..> RefreshToken : manages
+    RolesGuard ..> Roles : resolves metadata

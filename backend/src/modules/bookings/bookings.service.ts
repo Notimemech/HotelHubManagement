@@ -19,6 +19,8 @@ import { StaffService } from '../staff/staff.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { CreateWalkInBookingDto } from './dto/create-walk-in-booking.dto';
 import { ListBookingsFilterDto } from './dto/list-bookings-filter.dto';
+import { CreateSaleBookingDto } from './dto/create-sale-booking.dto';
+import { UpdateSaleBookingDto } from './dto/update-sale-booking.dto';
 
 @Injectable()
 export class BookingsService {
@@ -54,7 +56,11 @@ export class BookingsService {
   private async createBookingForCustomer(
     customerId: string,
     dto: CreateBookingDto,
-    opts?: { staffInChargeId?: string; changeReason?: string },
+    opts?: {
+      staffInChargeId?: string;
+      changeReason?: string;
+      evidenceImage?: string;
+    },
   ) {
     const checkIn = new Date(dto.checkIn);
     const checkOut = new Date(dto.checkOut);
@@ -83,6 +89,7 @@ export class BookingsService {
         currentVersion: 1,
         totalPrice: totalPrice,
         status: 'Pending',
+        evidenceImage: opts?.evidenceImage ?? null,
       });
       const savedBooking = await queryRunner.manager.save(booking);
 
@@ -203,7 +210,7 @@ export class BookingsService {
   async findAll(accountId: string) {
     const customerId = await this.resolveCustomerId(accountId);
     return this.bookingRepo.find({
-      where: { customerId: customerId },
+      where: { customerId: customerId, isDeleted: false },
       order: { bookingDate: 'DESC' },
     });
   }
@@ -211,7 +218,7 @@ export class BookingsService {
   async findOne(accountId: string, bookingId: string) {
     const customerId = await this.resolveCustomerId(accountId);
     const booking = await this.bookingRepo.findOne({
-      where: { bookingId: bookingId, customerId: customerId },
+      where: { bookingId: bookingId, customerId: customerId, isDeleted: false },
       relations: {
         versions: { details: { room: true }, payments: true },
         payments: true,
@@ -225,7 +232,7 @@ export class BookingsService {
   async listVersions(accountId: string, bookingId: string) {
     const customerId = await this.resolveCustomerId(accountId);
     const booking = await this.bookingRepo.findOne({
-      where: { bookingId: bookingId, customerId: customerId },
+      where: { bookingId: bookingId, customerId: customerId, isDeleted: false },
     });
     if (!booking) throw new NotFoundException('Booking not found');
     return this.versionRepo.find({
@@ -309,6 +316,7 @@ export class BookingsService {
       .leftJoinAndSelect('v.details', 'd')
       .leftJoinAndSelect('d.room', 'room')
       .leftJoinAndSelect('b.payments', 'payments')
+      .where('b.IsDeleted = 0')
       .orderBy('b.BookingDate', 'DESC');
 
     if (filter.status) {
@@ -331,7 +339,7 @@ export class BookingsService {
 
   async findOneForStaff(bookingId: string) {
     const booking = await this.bookingRepo.findOne({
-      where: { bookingId },
+      where: { bookingId, isDeleted: false },
       relations: {
         customer: true,
         versions: {
@@ -350,7 +358,7 @@ export class BookingsService {
 
   async listVersionsForStaff(bookingId: string) {
     const booking = await this.bookingRepo.findOne({
-      where: { bookingId },
+      where: { bookingId, isDeleted: false },
     });
     if (!booking) throw new NotFoundException('Booking not found');
     return this.versionRepo.find({
@@ -403,5 +411,232 @@ export class BookingsService {
 
       return { message: 'Booking checked out', bookingId, completedAt: new Date() };
     });
+  }
+
+  /* ============================================================
+   * Saler-only flows (create on behalf, edit with evidence, soft-delete, cancel)
+   * ============================================================ */
+
+  async createForSaler(accountId: string, dto: CreateSaleBookingDto) {
+    const staff = await this.staffService.findByAccountId(accountId);
+    if (!staff) throw new ForbiddenException('Not a staff member');
+
+    let customer = await this.customerRepo.findOne({
+      where: { phone: dto.customerPhone },
+    });
+    let isNewCustomer = false;
+
+    if (!customer) {
+      try {
+        customer = await this.dataSource.transaction(async (manager) => {
+          const placeholderPassword = await bcrypt.hash(
+            `walkin_${Date.now()}_${Math.random()}`,
+            10,
+          );
+          const stubAccount = await this.accountsService.create(
+            `walkin_${dto.customerPhone}`,
+            placeholderPassword,
+          );
+          await this.accountsService.setRole(stubAccount.accountId, 'User');
+          return manager.save(
+            manager.create(Customer, {
+              accountId: stubAccount.accountId,
+              fullName: dto.customerFullName,
+              email: dto.customerEmail,
+              phone: dto.customerPhone,
+              cccd: dto.customerCccd,
+            }),
+          );
+        });
+        isNewCustomer = true;
+      } catch (err) {
+        if (err instanceof QueryFailedError) {
+          throw new ConflictException(
+            'Customer with this phone/email already exists',
+          );
+        }
+        throw err;
+      }
+    }
+
+    const { bookingId } = await this.createBookingForCustomer(
+      customer!.customerId,
+      dto,
+      {
+        staffInChargeId: staff.staffId,
+        changeReason: 'Saler booking',
+        evidenceImage: dto.evidenceImage,
+      },
+    );
+
+    return {
+      message: 'Saler booking created',
+      bookingId,
+      customerId: customer!.customerId,
+      isNewCustomer,
+    };
+  }
+
+  async updateForSaler(
+    accountId: string,
+    bookingId: string,
+    dto: UpdateSaleBookingDto,
+  ) {
+    const staff = await this.staffService.findByAccountId(accountId);
+    if (!staff) throw new ForbiddenException('Not a staff member');
+
+    const booking = await this.bookingRepo.findOne({
+      where: { bookingId, isDeleted: false },
+      relations: { versions: true },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.status === 'Cancelled' || booking.status === 'Completed') {
+      throw new BadRequestException('Cannot modify this booking');
+    }
+
+    const latest = booking.versions.sort(
+      (a, b) => b.versionNumber - a.versionNumber,
+    )[0];
+
+    const resolvedCheckIn = dto.checkIn
+      ? new Date(dto.checkIn)
+      : latest?.checkIn;
+    const resolvedCheckOut = dto.checkOut
+      ? new Date(dto.checkOut)
+      : latest?.checkOut;
+    if (!resolvedCheckIn || !resolvedCheckOut) {
+      throw new BadRequestException(
+        'Check-in and check-out dates are required to recalculate price',
+      );
+    }
+    const diffTime = Math.abs(
+      resolvedCheckOut.getTime() - resolvedCheckIn.getTime(),
+    );
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+
+    let totalPrice = booking.totalPrice;
+    if (dto.roomIds && dto.roomIds.length > 0) {
+      const rooms = await this.roomRepo.find({
+        where: { roomId: In(dto.roomIds) },
+        relations: { roomType: true },
+      });
+      if (rooms.length !== dto.roomIds.length) {
+        throw new BadRequestException('Some rooms were not found');
+      }
+      totalPrice = 0;
+      for (const room of rooms) {
+        totalPrice += Number(room.roomType.price) * nights;
+      }
+    } else {
+      const latestDetails = await this.detailRepo.find({
+        where: { versionId: latest!.versionId },
+      });
+      totalPrice = 0;
+      for (const d of latestDetails) {
+        totalPrice += Number(d.price) * nights;
+      }
+    }
+
+    const nextVersion = (latest?.versionNumber ?? 0) + 1;
+
+    await this.dataSource.transaction(async (manager) => {
+      const newVer = manager.create(BookingVersion, {
+        bookingId: booking.bookingId,
+        versionNumber: nextVersion,
+        checkIn: resolvedCheckIn,
+        checkOut: resolvedCheckOut,
+        adults: dto.adults ?? latest?.adults,
+        children: dto.children ?? latest?.children,
+        specialRequest: dto.specialRequest ?? latest?.specialRequest,
+        totalAmountAtThisVersion: totalPrice,
+        staffInChargeId: staff.staffId,
+        changeReason: dto.changeReason ?? 'Saler cập nhật theo yêu cầu khách',
+        requestEvidenceImage: dto.requestEvidenceImage,
+      });
+      const savedVersion = await manager.save(newVer);
+
+      if (dto.roomIds && dto.roomIds.length > 0) {
+        const rooms = await manager.find(Room, {
+          where: { roomId: In(dto.roomIds) },
+          relations: { roomType: true },
+        });
+        for (const room of rooms) {
+          await manager.save(
+            manager.create(BookingDetail, {
+              versionId: savedVersion.versionId,
+              roomId: room.roomId,
+              price: room.roomType.price,
+              nights: nights,
+            }),
+          );
+        }
+      } else {
+        const latestDetails = await this.detailRepo.find({
+          where: { versionId: latest!.versionId },
+        });
+        for (const d of latestDetails) {
+          await manager.save(
+            manager.create(BookingDetail, {
+              versionId: savedVersion.versionId,
+              roomId: d.roomId,
+              price: d.price,
+              nights: nights,
+            }),
+          );
+        }
+      }
+
+      booking.currentVersion = nextVersion;
+      booking.totalPrice = totalPrice;
+      await manager.save(booking);
+    });
+
+    return {
+      message: 'Booking updated by Saler',
+      versionNumber: nextVersion,
+      bookingId: booking.bookingId,
+    };
+  }
+
+  async softDelete(accountId: string, bookingId: string) {
+    await this.staffService.findByAccountId(accountId);
+    const booking = await this.bookingRepo.findOne({
+      where: { bookingId },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.isDeleted) {
+      throw new BadRequestException('Booking đã bị xóa trước đó');
+    }
+    if (booking.status === 'Completed') {
+      throw new BadRequestException('Không thể xóa booking đã hoàn thành');
+    }
+
+    booking.isDeleted = true;
+    await this.bookingRepo.save(booking);
+
+    return { message: 'Booking soft-deleted', bookingId };
+  }
+
+  async cancelForSaler(accountId: string, bookingId: string) {
+    await this.staffService.findByAccountId(accountId);
+    const booking = await this.bookingRepo.findOne({
+      where: { bookingId, isDeleted: false },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.status === 'Cancelled') {
+      throw new BadRequestException('Booking đã được hủy trước đó');
+    }
+    if (booking.status === 'Completed') {
+      throw new BadRequestException('Không thể hủy booking đã hoàn thành');
+    }
+
+    booking.status = 'Cancelled';
+    await this.bookingRepo.save(booking);
+
+    return {
+      message: 'Booking cancelled',
+      bookingId,
+      status: 'Cancelled',
+    };
   }
 }

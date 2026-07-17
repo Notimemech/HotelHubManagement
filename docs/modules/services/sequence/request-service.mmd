@@ -1,0 +1,70 @@
+---
+title: Services - Request Service Flow (POST /services/request)
+---
+sequenceDiagram
+    autonumber
+    actor Client as User/Manager/Receptionist Client
+    participant Ctrl as ServicesController
+    participant Guard as AuthGuard
+    participant RGuard as RolesGuard
+    participant Service as ServicesService
+    participant BookingRepo as BookingRepo (TypeORM)
+    participant ServiceRepo as ServiceRepo (TypeORM)
+    participant BookingServiceRepo as BookingServiceRepo (TypeORM)
+    participant DB as Database (SQL Server)
+
+    note right of Client: POST /services/request (with Bearer Token, role in [User, Manager, Receptionist])
+    Client->>Ctrl: RequestServiceDto (bookingId, serviceId, quantity)
+    activate Ctrl
+    Ctrl->>Guard: canActivate(context)
+    Guard->>Guard: Verify JWT & attach user (sub = accountId) to request
+    alt JWT invalid / expired
+        Guard-->>Client: Throw UnauthorizedException
+    else JWT valid
+        Guard-->>Ctrl: return true
+    end
+
+    Ctrl->>RGuard: canActivate(context)
+    RGuard->>RGuard: Resolve @Roles('User', 'Manager', 'Receptionist')
+    alt Role not allowed
+        RGuard-->>Client: Throw ForbiddenException
+    end
+    RGuard-->>Ctrl: return true
+
+    Ctrl->>Service: requestService(req.user.sub, dto)
+    activate Service
+
+    Service->>BookingRepo: findOne({ where: { bookingId }, relations: { customer: true } })
+    BookingRepo->>DB: SELECT b.*, c.AccountId FROM Bookings b JOIN Customers c ON b.CustomerId = c.CustomerId WHERE b.BookingId = ?
+    DB-->>BookingRepo: Booking with customer / null
+    BookingRepo-->>Service: Booking / null
+
+    alt Booking not found OR booking.customer.accountId !== accountId
+        Service-->>Client: Throw NotFoundException (Booking not found)
+    end
+
+    Service->>ServiceRepo: findOne({ where: { serviceId: dto.serviceId } })
+    ServiceRepo->>DB: SELECT * FROM Services WHERE ServiceId = ?
+    DB-->>ServiceRepo: row / null
+    ServiceRepo-->>Service: Service / null
+    opt Service not found
+        Service-->>Client: Throw NotFoundException (Service not found)
+    end
+
+    Service->>BookingServiceRepo: create({ bookingId, serviceId, quantity })
+    Service->>BookingServiceRepo: save(bookingService)
+    BookingServiceRepo->>DB: INSERT INTO BookingServices (BookingId, ServiceId, Quantity) ...
+    DB-->>BookingServiceRepo: persisted BookingService
+    BookingServiceRepo-->>Service: BookingService Entity
+
+    Note over Service, BookingRepo: Update booking totalPrice = totalPrice + service.price * quantity
+
+    Service->>BookingRepo: save(booking with new totalPrice)
+    BookingRepo->>DB: UPDATE Bookings SET TotalPrice = ? WHERE BookingId = ?
+    DB-->>BookingRepo: ok
+
+    Service-->>Ctrl: { message: 'Service requested successfully', totalPrice }
+    deactivate Service
+
+    Ctrl-->>Client: HTTP 201 - { message, totalPrice }
+    deactivate Ctrl

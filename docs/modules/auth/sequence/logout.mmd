@@ -1,0 +1,28 @@
+---
+title: Auth - Logout Flow (POST /auth/logout)
+---
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Ctrl as AuthController
+    participant Service as AuthService
+    participant RefreshTokenModel as RefreshTokenModel (TypeORM Repository)
+    participant Util as Security Utils (bcrypt / crypto / jwt)
+    participant DB as Database (SQL Server)
+
+    note right of Client: POST /auth/logout
+    Client->>Ctrl: RefreshTokenDto (refreshToken)
+    Ctrl->>Service: logout(dto)
+    Service->>Util: hashToken(refreshToken) (SHA-256)
+    Util-->>Service: tokenHash
+    Service->>RefreshTokenModel: findOne({ tokenHash })
+    RefreshTokenModel->>DB: SELECT * FROM RefreshTokens WHERE TokenHash = ?
+    DB-->>RefreshTokenModel: row / null
+    RefreshTokenModel-->>Service: RefreshToken Entity / null
+    opt If RefreshToken found
+        Service->>RefreshTokenModel: remove(record)
+        RefreshTokenModel->>DB: DELETE FROM RefreshTokens WHERE Id = ?
+        DB-->>RefreshTokenModel: ok
+    end
+    Service-->>Ctrl: MessageResponseDto (message)
+    Ctrl-->>Client: HTTP 200 - MessageResponseDto
