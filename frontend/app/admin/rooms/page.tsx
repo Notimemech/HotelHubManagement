@@ -12,12 +12,17 @@ import {
   updateRoom,
   deleteRoom,
   setRoomStatus,
+  assignRoomToCleaner,
   listRoomTypes,
+  listStaff,
   type Room,
   type RoomType,
+  type Staff,
 } from "@/lib/admin-api";
+import { useAuth } from "@/lib/auth-context";
 
 const STATUSES = ["Available", "Occupied", "Maintenance", "Cleaning"];
+const FORM_STATUSES = ["Available", "Occupied", "Maintenance"];
 const STATUS_COLORS: Record<string, string> = {
   Available: "bg-emerald-100 text-emerald-700",
   Occupied: "bg-blue-100 text-blue-700",
@@ -25,26 +30,39 @@ const STATUS_COLORS: Record<string, string> = {
   Cleaning: "bg-purple-100 text-purple-700",
 };
 
+const UUID_PATTERN = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/i;
+
 export default function RoomsPage() {
+  const { user } = useAuth();
+  const isManager = user?.role === "Manager";
   const [rooms, setRooms] = useState<Room[]>([]);
   const [types, setTypes] = useState<RoomType[]>([]);
+  const [cleaners, setCleaners] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<"add" | "edit" | "status" | null>(null);
   const [editing, setEditing] = useState<Room | null>(null);
   const [form, setForm] = useState({ roomCode: "", typeId: "", floor: "", status: "Available" });
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedCleaner, setSelectedCleaner] = useState("");
+  const [cleanerError, setCleanerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [r, t] = await Promise.all([listRooms(), listRoomTypes()]);
+      const [r, t, staff] = await Promise.all([
+        listRooms(),
+        listRoomTypes(),
+        isManager ? listStaff() : Promise.resolve([]),
+      ]);
       setRooms(r);
       setTypes(t);
+      setCleaners(staff.filter((s) => s.role === "Cleaner" && s.isActive));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isManager]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -64,6 +82,9 @@ export default function RoomsPage() {
 
   const openStatus = (room: Room) => {
     setEditing(room);
+    setSelectedStatus(room.status);
+    setSelectedCleaner("");
+    setCleanerError(null);
     setError(null);
     setModal("status");
   };
@@ -84,12 +105,37 @@ export default function RoomsPage() {
     }
   };
 
-  const saveStatus = async (newStatus: string) => {
+  const saveStatus = async () => {
     if (!editing) return;
+
+    if (!STATUSES.includes(selectedStatus)) {
+      setError("Trạng thái phòng không hợp lệ.");
+      return;
+    }
+
+    if (selectedStatus === "Cleaning") {
+      if (!isManager) {
+        setCleanerError("Chỉ Manager có thể phân công Cleaner.");
+        return;
+      }
+      if (!selectedCleaner) {
+        setCleanerError("Vui lòng chọn Cleaner.");
+        return;
+      }
+      if (!UUID_PATTERN.test(editing.roomId) || !UUID_PATTERN.test(selectedCleaner)) {
+        setCleanerError("Thông tin phòng hoặc Cleaner không hợp lệ.");
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
+    setCleanerError(null);
     try {
-      await setRoomStatus(editing.roomId, newStatus);
+      if (selectedStatus === "Cleaning") {
+        await assignRoomToCleaner(editing.roomId, selectedCleaner);
+      }
+      await setRoomStatus(editing.roomId, selectedStatus);
       setModal(null);
       await load();
     } catch (e: unknown) {
@@ -171,7 +217,7 @@ export default function RoomsPage() {
           </Field>
           <Field label="Trạng thái">
             <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={INPUT}>
-              {STATUSES.map((s) => <option key={s}>{s}</option>)}
+              {FORM_STATUSES.map((s) => <option key={s}>{s}</option>)}
             </select>
           </Field>
           {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -182,22 +228,59 @@ export default function RoomsPage() {
       </Modal>
 
       <Modal open={modal === "status"} onClose={() => setModal(null)} title="Đổi trạng thái phòng">
-        <div className="space-y-2">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={() => saveStatus(s)}
+        <div className="space-y-4">
+          <Field label="Trạng thái">
+            <select
+              value={selectedStatus}
+              onChange={(e) => {
+                setSelectedStatus(e.target.value);
+                setSelectedCleaner("");
+                setCleanerError(null);
+                setError(null);
+              }}
               disabled={saving}
-              className={`w-full py-2 rounded-lg text-sm font-medium border cursor-pointer ${
-                editing?.status === s
-                  ? "border-amber-600 bg-amber-50 text-amber-700"
-                  : "border-zinc-200 hover:bg-zinc-50 text-zinc-700"
-              }`}
+              className={INPUT}
             >
-              {s}
-            </button>
-          ))}
+              {STATUSES.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </Field>
+
+          {selectedStatus === "Cleaning" && (
+            isManager ? (
+              <Field label="Cleaner phụ trách">
+                <select
+                  value={selectedCleaner}
+                  onChange={(e) => {
+                    setSelectedCleaner(e.target.value);
+                    setCleanerError(null);
+                    setError(null);
+                  }}
+                  disabled={saving}
+                  className={INPUT}
+                  aria-invalid={Boolean(cleanerError)}
+                >
+                  <option value="">-- Chọn Cleaner --</option>
+                  {cleaners.map((cleaner) => (
+                    <option key={cleaner.staffId} value={cleaner.staffId}>
+                      {cleaner.fullName}
+                    </option>
+                  ))}
+                </select>
+                {cleanerError && <p className="mt-1 text-red-600 text-sm">{cleanerError}</p>}
+              </Field>
+            ) : (
+              <p className="text-sm text-amber-700">Chỉ Manager có thể chuyển phòng sang Cleaning và phân công Cleaner.</p>
+            )
+          )}
+
           {error && <p className="text-red-600 text-sm">{error}</p>}
+          <button
+            onClick={saveStatus}
+            disabled={saving || (selectedStatus === "Cleaning" && !isManager)}
+            className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium cursor-pointer disabled:opacity-60"
+          >
+            {saving ? <Spinner className="w-4 h-4 mx-auto" /> : selectedStatus === "Cleaning" ? "Phân công và lưu" : "Lưu"}
+          </button>
         </div>
       </Modal>
     </div>

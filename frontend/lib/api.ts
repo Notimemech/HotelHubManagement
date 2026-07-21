@@ -25,6 +25,12 @@ export async function apiRequest<T = unknown>(
   return data as T;
 }
 
+export function completeRoomCleaning(roomId: string) {
+  return apiRequest(`/housekeeping/rooms/${roomId}/complete`, {
+    method: "PATCH",
+  });
+}
+
 // ---- Profile helpers ----
 
 export interface CustomerProfile {
@@ -90,7 +96,7 @@ export function updateMyStaffProfile(dto: UpdateStaffProfile) {
   return apiRequest<{ staff: StaffProfile }>("/staff/me", {
     method: "PATCH",
     body: JSON.stringify(dto),
-  });
+  }).then((r) => r.staff);
 }
 
 export function changePassword(oldPassword: string, newPassword: string) {

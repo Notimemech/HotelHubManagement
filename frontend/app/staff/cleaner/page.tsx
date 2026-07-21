@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, completeRoomCleaning } from "@/lib/api";
 import { Spinner } from "../../components/Spinner";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface Assignment {
   assignmentId: string;
@@ -38,7 +40,7 @@ export default function CleanerPage() {
         apiRequest<Assignment[]>("/housekeeping/my-assignments"),
         apiRequest<Template[]>("/housekeeping/templates"),
       ]);
-      setAssignments(a);
+      setAssignments(a.filter((assignment) => assignment.room?.status === "Cleaning"));
       setTemplates(t);
     } catch (e) {
       setError((e as Error).message);
@@ -54,25 +56,36 @@ export default function CleanerPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeRoom) return;
-    setSubmitting(true);
     setError(null);
     setSuccess(null);
+
+    if (!UUID_PATTERN.test(activeRoom.roomId)) {
+      setError("Thông tin phòng không hợp lệ.");
+      return;
+    }
+    if (!templateType.trim()) {
+      setError("Vui lòng chọn checklist.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await apiRequest("/housekeeping/logs", {
         method: "POST",
         body: JSON.stringify({
           roomId: activeRoom.roomId,
-          templateType,
+          templateType: templateType.trim(),
           evidenceImage: evidenceImage || undefined,
           notes: notes || undefined,
         }),
       });
-      setSuccess("Đã ghi nhận checklist.");
+      await completeRoomCleaning(activeRoom.roomId);
+      setSuccess("Đã ghi nhận checklist và phòng đã sẵn sàng.");
       setActiveRoom(null);
       setTemplateType("");
       setEvidenceImage("");
       setNotes("");
-      load();
+      await load();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -154,8 +167,12 @@ export default function CleanerPage() {
               </label>
               <select
                 value={templateType}
-                onChange={(e) => setTemplateType(e.target.value)}
+                onChange={(e) => {
+                  setTemplateType(e.target.value);
+                  setError(null);
+                }}
                 required
+                disabled={submitting}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
               >
                 <option value="">-- Chọn --</option>
@@ -173,8 +190,12 @@ export default function CleanerPage() {
               <input
                 type="url"
                 value={evidenceImage}
-                onChange={(e) => setEvidenceImage(e.target.value)}
+                onChange={(e) => {
+                  setEvidenceImage(e.target.value);
+                  setError(null);
+                }}
                 placeholder="https://..."
+                disabled={submitting}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
               />
             </div>
@@ -184,8 +205,12 @@ export default function CleanerPage() {
               </label>
               <textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  setError(null);
+                }}
                 rows={3}
+                disabled={submitting}
                 className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
               />
             </div>
@@ -193,7 +218,8 @@ export default function CleanerPage() {
               <button
                 type="button"
                 onClick={() => setActiveRoom(null)}
-                className="px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 rounded-md cursor-pointer"
+                disabled={submitting}
+                className="px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 rounded-md cursor-pointer disabled:opacity-50"
               >
                 Huỷ
               </button>
@@ -202,7 +228,7 @@ export default function CleanerPage() {
                 disabled={submitting}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-md disabled:opacity-50 cursor-pointer"
               >
-                {submitting ? "Đang lưu..." : "Lưu"}
+                {submitting ? "Đang lưu..." : "Ghi nhận và hoàn tất"}
               </button>
             </div>
           </form>
@@ -211,3 +237,5 @@ export default function CleanerPage() {
     </div>
   );
 }
+
+// ponytail: one submit action covers checklist plus room completion; no separate workflow screen.

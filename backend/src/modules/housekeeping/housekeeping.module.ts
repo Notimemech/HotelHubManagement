@@ -6,11 +6,13 @@ import { RoomAssignment } from './entities/room-assignment.entity';
 import { HousekeepingService } from './housekeeping.service';
 import { HousekeepingController } from './housekeeping.controller';
 import { StaffModule } from '../staff/staff.module';
+import { RoomsModule } from '../rooms/rooms.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChecklistTemplate, ChecklistLog, RoomAssignment]),
     StaffModule,
+    RoomsModule,
   ],
   controllers: [HousekeepingController],
   providers: [HousekeepingService],

@@ -1,11 +1,13 @@
 import {
   Controller,
   Get,
+  Patch,
   Post,
   Param,
   Body,
   UseGuards,
   Request,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { HousekeepingService } from './housekeeping.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
@@ -26,7 +28,7 @@ export class HousekeepingController {
     return this.housekeepingService.createTemplate(dto);
   }
 
-  @Roles('Manager')
+  @Roles('Cleaner', 'Manager')
   @Get('templates')
   listTemplates() {
     return this.housekeepingService.listTemplates();
@@ -36,6 +38,15 @@ export class HousekeepingController {
   @Post('logs')
   log(@Request() req, @Body() dto: LogChecklistDto) {
     return this.housekeepingService.logChecklist(req.user.sub, dto);
+  }
+
+  @Roles('Cleaner')
+  @Patch('rooms/:roomId/complete')
+  complete(
+    @Request() req: { user: { sub: string } },
+    @Param('roomId', new ParseUUIDPipe()) roomId: string,
+  ) {
+    return this.housekeepingService.completeCleaning(req.user.sub, roomId);
   }
 
   @Roles('Cleaner', 'Manager')

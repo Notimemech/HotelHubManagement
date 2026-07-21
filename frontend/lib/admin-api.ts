@@ -135,6 +135,12 @@ export function setRoomStatus(id: string, status: string) {
     body: JSON.stringify({ status }),
   });
 }
+export function assignRoomToCleaner(roomId: string, cleanerStaffId: string) {
+  return apiRequest("/housekeeping/assignments", {
+    method: "POST",
+    body: JSON.stringify({ roomId, cleanerStaffId }),
+  });
+}
 export function deleteRoom(id: string) {
   return apiRequest<{ message: string }>(`/rooms/${id}`, {
     method: "DELETE",

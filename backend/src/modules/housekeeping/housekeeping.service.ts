@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -11,6 +12,7 @@ import { RoomAssignment } from './entities/room-assignment.entity';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { LogChecklistDto } from './dto/log-checklist.dto';
 import { StaffService } from '../staff/staff.service';
+import { RoomsService } from '../rooms/rooms.service';
 
 @Injectable()
 export class HousekeepingService {
@@ -22,6 +24,7 @@ export class HousekeepingService {
     @InjectRepository(RoomAssignment)
     private readonly assignmentRepo: Repository<RoomAssignment>,
     private readonly staffService: StaffService,
+    private readonly roomsService: RoomsService,
   ) {}
 
   createTemplate(dto: CreateTemplateDto): Promise<ChecklistTemplate> {
@@ -57,6 +60,31 @@ export class HousekeepingService {
         notes: dto.notes,
       }),
     );
+  }
+
+  async completeCleaning(accountId: string, roomId: string) {
+    const staff = await this.staffService.findByAccountId(accountId);
+    if (!staff) throw new ForbiddenException('Staff profile not found');
+
+    const assigned = await this.assignmentRepo.findOne({
+      where: { roomId, cleanerId: staff.staffId },
+    });
+    if (!assigned) {
+      throw new ForbiddenException(
+        'You are not assigned to this room',
+      );
+    }
+
+    const checklist = await this.logRepo.findOne({
+      where: { roomId, staffId: staff.staffId },
+    });
+    if (!checklist) {
+      throw new BadRequestException(
+        'Submit a checklist before completing this room',
+      );
+    }
+
+    return this.roomsService.setStatus(roomId, 'Available');
   }
 
   async listMyAssignments(accountId: string): Promise<RoomAssignment[]> {
