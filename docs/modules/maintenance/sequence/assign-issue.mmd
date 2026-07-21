@@ -3,34 +3,43 @@ sequenceDiagram
     actor Client as Manager
     participant Ctrl as MaintenanceController
     participant Service as MaintenanceService
+    participant StaffSvc as StaffService
     participant DB as Database
 
-    note right of Client: POST /maintenance/assignments
+    note right of Client: POST /maintenance/assignments (Bearer Token)
     Client->>Ctrl: AssignIssueDto
     activate Ctrl
+    Ctrl->>Ctrl: AuthGuard & RolesGuard (Manager only)
 
-    Ctrl->>Service: assignIssue(managerAccountId, dto)
+    Ctrl->>Service: assignIssue(managerAccountId, issueId, maintainerStaffId)
     activate Service
-    
-    Service->>DB: Check issue & maintainer
-    DB-->>Service: IssueReport + StaffInfo
+
+    Service->>StaffSvc: findByAccountId(managerAccountId)
+    StaffSvc-->>Service: StaffInfo
+
+    alt Manager profile not found
+        Service-->>Client: 403 Forbidden
+    end
+
+    Service->>DB: Find IssueReport (issueId)
+    DB-->>Service: IssueReport
 
     alt Issue not found
         Service-->>Client: 404 Not Found
     end
 
-    Service->>DB: Check existing assignment
+    Service->>DB: Check existing IssueAssignment
     DB-->>Service: IssueAssignment / null
 
     alt Already assigned
         Service-->>Ctrl: Existing IssueAssignment
     else New assignment
-        Service->>DB: INSERT IssueAssignment
+        Service->>DB: INSERT IssueAssignments
         DB-->>Service: IssueAssignment
     end
 
     Service-->>Ctrl: IssueAssignment
     deactivate Service
-    
+
     Ctrl-->>Client: 201 Created
     deactivate Ctrl

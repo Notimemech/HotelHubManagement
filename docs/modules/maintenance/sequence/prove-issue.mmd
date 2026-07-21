@@ -3,29 +3,39 @@ sequenceDiagram
     actor Client as Maintainer
     participant Ctrl as MaintenanceController
     participant Service as MaintenanceService
+    participant StaffSvc as StaffService
     participant DB as Database
 
-    note right of Client: POST /maintenance/issues/:id/prove
+    note right of Client: POST /maintenance/issues/:id/prove (Bearer Token)
     Client->>Ctrl: ProveIssueDto
     activate Ctrl
+    Ctrl->>Ctrl: AuthGuard & RolesGuard (Maintainer | Manager)
 
     Ctrl->>Service: proveIssue(maintainerAccountId, issueId, dto)
     activate Service
-    
-    Service->>DB: Check staff & assignment
-    DB-->>Service: StaffInfo + IssueAssignment
 
-    alt Staff not found or not assigned
-        Service-->>Client: 403 Forbidden
+    Service->>StaffSvc: findByAccountId(maintainerAccountId)
+    StaffSvc-->>Service: StaffInfo
+
+    alt Staff not found
+        Service-->>Client: 403 Forbidden (Staff profile not found)
+    end
+
+    Service->>DB: Check IssueAssignment (issueId, maintainerId)
+    DB-->>Service: IssueAssignment
+
+    alt Not assigned
+        Service-->>Client: 403 Forbidden (not assigned)
     end
 
     Service->>DB: BEGIN TRANSACTION
-    Service->>DB: INSERT Prove + UPDATE Issue status='Resolved'
+    Service->>DB: INSERT MaintenanceProves
+    Service->>DB: UPDATE IssueReports.status = 'Resolved'
     Service->>DB: COMMIT
     DB-->>Service: MaintenanceProve
 
     Service-->>Ctrl: MaintenanceProve
     deactivate Service
-    
+
     Ctrl-->>Client: 201 Created
     deactivate Ctrl

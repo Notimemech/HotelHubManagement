@@ -9,21 +9,21 @@ sequenceDiagram
     note right of Client: POST /housekeeping/logs (Bearer Token)
     Client->>Ctrl: LogChecklistDto
     activate Ctrl
-    Ctrl->>Ctrl: AuthGuard & RolesGuard
+    Ctrl->>Ctrl: AuthGuard & RolesGuard (Cleaner | Manager)
 
     Ctrl->>Service: logChecklist(accountId, dto)
     activate Service
-    
+
     Service->>StaffSvc: findByAccountId(accountId)
     StaffSvc-->>Service: StaffInfo
-    
+
     alt Staff not found
         Service-->>Client: 403 Forbidden
     end
 
     Service->>DB: Check assignment (RoomID, CleanerId)
     DB-->>Service: RoomAssignment
-    
+
     alt Not assigned
         Service-->>Client: 403 Forbidden
     end
@@ -33,6 +33,6 @@ sequenceDiagram
 
     Service-->>Ctrl: ChecklistLog
     deactivate Service
-    
+
     Ctrl-->>Client: 201 Created
     deactivate Ctrl

@@ -109,8 +109,8 @@ classDiagram
     MaintenanceModule --> StaffModule
     MaintenanceController --> MaintenanceService
     MaintenanceService --> StaffService : resolves StaffId by accountId
-    MaintenanceService --> IssueReport : persist
-    MaintenanceService --> MaintenanceProve : persist + update IssueReport.status
+    MaintenanceService --> IssueReport : persist + status update
+    MaintenanceService --> MaintenanceProve : persist
     MaintenanceService --> IssueAssignment : persist + check
 
     IssueReport --> Room : RoomID
@@ -124,6 +124,7 @@ classDiagram
     MaintenanceService ..> ProveIssueDto
     MaintenanceService ..> AssignIssueDto
 
-    note for MaintenanceController "Roles: anyone for POST issues, Maintainer or Manager for prove/my-issues, Manager for assign"
-    note for MaintenanceService "proveIssue is transactional: create Prove + set Issue.status='Resolved'"
-    note for IssueAssignment "Manager assigns Maintainer to Issue. Maintainer must have assignment before proving."
+    note for MaintenanceController "Roles: User|Receptionist|Cleaner|Maintainer|Manager report, Manager|Receptionist|Maintainer list, Maintainer|Manager my-issues+prove, Manager only assignments, Manager|Receptionist|Maintainer proves"
+    note for MaintenanceService "proveIssue runs in dataSource.transaction: insert MaintenanceProve then update IssueReports.Status='Resolved'. No room status mutation."
+    note for IssueAssignment "Manager assigns Maintainer to Issue. Maintainer must have assignment before prove (403 otherwise)."
+    note for IssueReport "Status lifecycle: Pending -> Resolved (set by proveIssue). reportIssue always creates Pending."

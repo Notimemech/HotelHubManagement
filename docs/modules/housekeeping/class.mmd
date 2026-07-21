@@ -7,6 +7,7 @@ classDiagram
         +HousekeepingController
         +HousekeepingService
         +StaffModule
+        +RoomsModule
     }
 
     class HousekeepingController {
@@ -15,6 +16,7 @@ classDiagram
         +POST templates CreateTemplateDto ChecklistTemplate
         +GET templates ChecklistTemplate[]
         +POST logs LogChecklistDto ChecklistLog
+        +PATCH rooms/:roomId/complete Room
         +GET my-assignments RoomAssignment[]
         +GET logs/room/:roomId ChecklistLog[]
         +POST assignments AssignRoomDto RoomAssignment
@@ -26,12 +28,24 @@ classDiagram
         -logRepo: Repository~ChecklistLog~
         -assignmentRepo: Repository~RoomAssignment~
         -staffService: StaffService
+        -roomsService: RoomsService
         +createTemplate(dto) ChecklistTemplate
         +listTemplates() ChecklistTemplate[]
         +logChecklist(accountId, dto) ChecklistLog
+        +completeCleaning(accountId, roomId) Room
         +listMyAssignments(accountId) RoomAssignment[]
         +listLogsByRoom(roomId) ChecklistLog[]
         +assignRoom(managerAccountId, roomId, cleanerStaffId) RoomAssignment
+    }
+
+    class RoomsModule {
+        <<Module>>
+        +RoomsService
+    }
+
+    class RoomsService {
+        <<Service>>
+        +setStatus(roomId, status) Room
     }
 
     class ChecklistTemplate {
@@ -106,10 +120,12 @@ classDiagram
     HousekeepingModule --> HousekeepingController
     HousekeepingModule --> HousekeepingService
     HousekeepingModule --> StaffModule
+    HousekeepingModule --> RoomsModule
     HousekeepingController --> HousekeepingService
     HousekeepingService --> StaffService : resolves StaffId by accountId
+    HousekeepingService --> RoomsService : delegates setStatus Available
     HousekeepingService --> ChecklistTemplate : persist
-    HousekeepingService --> ChecklistLog : persist
+    HousekeepingService --> ChecklistLog : persist + check
     HousekeepingService --> RoomAssignment : persist + check
 
     RoomAssignment --> Room : RoomID
@@ -122,5 +138,7 @@ classDiagram
     HousekeepingService ..> LogChecklistDto
     HousekeepingService ..> AssignRoomDto
 
-    note for HousekeepingController "Roles: Manager for templates/assign, Cleaner or Manager for logs/my-assignments, Manager or Receptionist for logs/room/:roomId"
-    note for RoomAssignment "Manager assigns Cleaner to Room. Cleaner must have assignment before logging checklist."
+    note for HousekeepingController "Roles: Manager templates/assign, Cleaner or Manager logs/my-assignments/templates, Manager or Receptionist logs/room/:roomId, Cleaner only rooms/:roomId/complete (with ParseUUIDPipe)"
+    note for HousekeepingService "completeCleaning: requires RoomAssignment + ChecklistLog -> RoomsService.setStatus Available"
+    note for RoomAssignment "Manager assigns Cleaner to Room. Cleaner must have assignment before logging checklist or completing."
+    note for ChecklistLog "Stored once per Cleaner + Room; gates the completeCleaning action."

@@ -1,0 +1,50 @@
+sequenceDiagram
+    autonumber
+    actor Client as Cleaner
+    participant Ctrl as HousekeepingController
+    participant Service as HousekeepingService
+    participant StaffSvc as StaffService
+    participant RoomsSvc as RoomsService
+    participant DB as Database
+
+    note right of Client: PATCH /housekeeping/rooms/:roomId/complete (Bearer Token)
+    Client->>Ctrl: empty body + roomId (UUID)
+    activate Ctrl
+    Ctrl->>Ctrl: AuthGuard & RolesGuard (Cleaner only) + ParseUUIDPipe
+
+    Ctrl->>Service: completeCleaning(accountId, roomId)
+    activate Service
+
+    Service->>StaffSvc: findByAccountId(accountId)
+    StaffSvc-->>Service: StaffInfo
+
+    alt Staff not found
+        Service-->>Client: 403 Forbidden (Staff profile not found)
+    end
+
+    Service->>DB: Check assignment (RoomID, CleanerId)
+    DB-->>Service: RoomAssignment
+
+    alt Not assigned
+        Service-->>Client: 403 Forbidden (not assigned)
+    end
+
+    Service->>DB: Check ChecklistLog (RoomID, StaffId)
+    DB-->>Service: ChecklistLog
+
+    alt No checklist submitted
+        Service-->>Client: 400 Bad Request
+    end
+
+    Service->>RoomsSvc: setStatus(roomId, 'Available')
+    activate RoomsSvc
+    RoomsSvc->>DB: UPDATE Rooms.Status
+    DB-->>RoomsSvc: Room
+    RoomsSvc-->>Service: Room (status Available)
+    deactivate RoomsSvc
+
+    Service-->>Ctrl: Room
+    deactivate Service
+
+    Ctrl-->>Client: 200 OK
+    deactivate Ctrl
